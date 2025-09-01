@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.1.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.1.0 https://maven.apache.org/xsd/maven-4.1.0.xsd">
+    <modelVersion>4.1.0</modelVersion>
+
+    <parent>
+        <groupId>dev.ikm.ike</groupId>
+        <artifactId>ike-pom</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../ike-pom/pom.xml</relativePath>
+    </parent>
+
+    <groupId>dev.ikm.ike</groupId>
+    <artifactId>komet-desktop</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <name>KOMET Desktop</name>
+    <packaging>pom</packaging>
+    <description>Aggregator or placeholder for KOMET Desktop app build.</description>
+</project>
