@@ -50,6 +50,7 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import one.jpro.platform.utils.CommandRunner;
 import one.jpro.platform.utils.PlatformUtils;
+import org.eclipse.collections.api.factory.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -350,7 +351,8 @@ public class App extends Application  {
 
         if (IS_DESKTOP) {
             // close all journal windows
-            journalControllersList.forEach(JournalController::close);
+            // Immutable copy, since we are getting: ConcurrentModificationException
+            Lists.immutable.ofAll(journalControllersList).forEach(JournalController::close);
         }
     }
 

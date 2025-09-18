@@ -8,6 +8,7 @@
         <version>0.1.0-SNAPSHOT</version>
     </parent>
     <artifactId>komet-desktop</artifactId>
+    <name>Komet Desktop ${project.version}</name>
 
     <properties>
         <java.version>25</java.version>
@@ -336,6 +337,7 @@
                             <jlinkZipName>kometJlink</jlinkZipName>
                             <options>
                                 <option>--enable-preview</option>
+                                <option>-XX:+UseCompactObjectHeaders</option>
                                 <option>-Xmx24g</option>
                                 <option>-Xms24g</option>
                                 <option>--add-opens</option>
@@ -366,6 +368,7 @@
                             <jlinkZipName>kometDebugJlink</jlinkZipName>
                             <options>
                                 <option>--enable-preview</option>
+                                <option>-XX:+UseCompactObjectHeaders</option>
                                 <option>-Xmx24g</option>
                                 <option>-Xms24g</option>
                                 <option>--add-opens</option>
@@ -397,6 +400,7 @@
                             <jlinkZipName>kometProfileJlink</jlinkZipName>
                             <options>
                                 <option>--enable-preview</option>
+                                <option>-XX:+UseCompactObjectHeaders</option>
                                 <option>-Xmx24g</option>
                                 <option>-Xms24g</option>
                                 <option>--add-opens</option>
