@@ -8,7 +8,7 @@
         <version>0.1.0-SNAPSHOT</version>
     </parent>
     <artifactId>komet-desktop</artifactId>
-    <name>Komet Desktop ${project.version}</name>
+    <name>Komet Desktop</name>
 
     <properties>
         <java.version>25</java.version>
@@ -492,8 +492,8 @@
                 <activeByDefault>false</activeByDefault>
             </activation>
             <properties>
-                <jpackage.app.name>Komet ${project.version}</jpackage.app.name>
-                <jpackage.app.version>${project.version}</jpackage.app.version>
+                <jpackage.app.name>Komet Desktop</jpackage.app.name>
+                <jpackage.app.version>1.0.999</jpackage.app.version>
                 <jpackage.app.dest>target/dist/installer</jpackage.app.dest>
             </properties>
             <build>
@@ -513,7 +513,8 @@
                             <runtimeImage>target/kometRuntimeImage</runtimeImage>
                             <module>dev.ikm.komet.application/dev.ikm.komet.app.App</module>
                             <javaOptions>
-                                <option>-Xmx8g</option>
+                                <option>--enable-preview</option>
+                                <option>-Xmx16g</option>
                                 <option>--add-opens</option>
                                 <option>javafx.graphics/javafx.scene=org.controlsfx.controls</option>
                                 <option>--add-exports</option>
