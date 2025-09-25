@@ -15,7 +15,6 @@ import dev.ikm.komet.navigator.graph.GraphNavigatorNodeFactory;
 import dev.ikm.komet.preferences.KometPreferences;
 import dev.ikm.komet.preferences.KometPreferencesImpl;
 import dev.ikm.komet.search.SearchNodeFactory;
-import dev.ikm.tinkar.common.id.*;
 import dev.ikm.tinkar.common.service.PrimitiveData;
 import dev.ikm.tinkar.coordinate.view.calculator.*;
 import dev.ikm.tinkar.entity.*;
@@ -46,6 +45,7 @@ import static dev.ikm.komet.kview.mvvm.model.DataModelHelper.fetchDescendentsOfC
 import static dev.ikm.komet.kview.mvvm.view.loginauthor.LoginAuthorViewModel.LoginProperties.SELECTED_AUTHOR;
 import static dev.ikm.komet.kview.mvvm.viewmodel.FormViewModel.CURRENT_JOURNAL_WINDOW_TOPIC;
 import static dev.ikm.komet.kview.mvvm.viewmodel.FormViewModel.VIEW_PROPERTIES;
+import static dev.ikm.komet.kview.mvvm.viewmodel.JournalViewModel.JOURNAL_NAME;
 import static dev.ikm.komet.kview.mvvm.viewmodel.JournalViewModel.WINDOW_SETTINGS;
 import static dev.ikm.komet.preferences.JournalWindowPreferences.*;
 import static dev.ikm.komet.preferences.JournalWindowSettings.*;
@@ -74,7 +74,7 @@ public class AppPages {
         app.rootPane.getChildren().setAll(loginPane);
         stage.setTitle("KOMET Login");
 
-        app.appMenu.setupMenus();
+        app.appMenu.setupMenus(loginPane);
     }
 
     void launchSelectDataSourcePage(Stage stage) {
@@ -90,7 +90,7 @@ public class AppPages {
             app.rootPane.getChildren().setAll(sourceRoot);
             stage.setTitle("KOMET Startup");
 
-            app.appMenu.setupMenus();
+            app.appMenu.setupMenus(app.rootPane);
         } catch (IOException ex) {
             LOG.error("Failed to initialize the select data source window", ex);
         }
@@ -216,7 +216,7 @@ public class AppPages {
 
             app.rootPane.getChildren().add(landingPageBorderPane);
 
-            app.appMenu.setupMenus();
+            app.appMenu.setupMenus(app.rootPane);
         } catch (IOException e) {
             LOG.error("Failed to initialize the landing page window", e);
         }
@@ -245,13 +245,14 @@ public class AppPages {
                 .updateViewModel("journalViewModel", journalViewModel -> {
                     journalViewModel.setPropertyValue(CURRENT_JOURNAL_WINDOW_TOPIC, journalTopic);
                     journalViewModel.setPropertyValue(WINDOW_SETTINGS, windowSettings);
+                    journalViewModel.setPropertyValue(JOURNAL_NAME, journalWindowSettings.getValue(JOURNAL_TITLE));
                 });
         JFXNode<BorderPane, JournalController> journalJFXNode = FXMLMvvmLoader.make(journalConfig);
         BorderPane journalBorderPane = journalJFXNode.node();
         JournalController journalController = journalJFXNode.controller();
 
         journalController.setup(windowPreferences);
-        
+
         Scene sourceScene = new Scene(journalBorderPane, DEFAULT_JOURNAL_WIDTH, DEFAULT_JOURNAL_HEIGHT);
         addStylesheets(sourceScene, KOMET_CSS, KVIEW_CSS);
 
@@ -281,7 +282,7 @@ public class AppPages {
             journalStage.setWidth(journalWindowSettings.getValue(JOURNAL_WIDTH));
             journalStage.setX(journalWindowSettings.getValue(JOURNAL_XPOS));
             journalStage.setY(journalWindowSettings.getValue(JOURNAL_YPOS));
-            journalController.restoreWindows(journalWindowSettings);
+            journalController.restoreWindows(windowSettings, journalWindowSettings);
         } else {
             journalStage.setMaximized(true);
         }
