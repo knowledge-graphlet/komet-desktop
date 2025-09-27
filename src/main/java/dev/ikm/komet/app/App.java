@@ -50,12 +50,15 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import one.jpro.platform.utils.CommandRunner;
 import one.jpro.platform.utils.PlatformUtils;
+import org.apache.logging.log4j.core.config.Configurator;
+import org.apache.logging.log4j.core.LoggerContext;
 import org.eclipse.collections.api.factory.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -183,9 +186,21 @@ public class App extends Application  {
             LOG.info("Finished shutdown hook");
         }));
     }
+    public static void initLog4J2FromConf() {
+        // Resolve <bin directory>/../conf/xml (or your app’s working dir/../conf)
+        Path cfg = Path.of("..", "conf", "log4j2.xml").toAbsolutePath();
+
+        // Initialize BEFORE any logger is used
+        LoggerContext context = Configurator.initialize("app-log4j2", null, cfg.toUri());
+        context.getLogger("console").info("Log4j2 configuration loaded from: {}", cfg);
+        context.getLogger("rollingFile").info("Log4j2 configuration loaded from: {}", cfg);
+        System.out.println(context.getConfiguration());
+    }
 
     @Override
     public void init() throws Exception {
+        initLog4J2FromConf();
+
         LOG.info("Starting Komet");
 
         // Set system properties for macOS look and feel and application name in the menu bar

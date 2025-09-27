@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <Console name="console">
+            <PatternLayout pattern="%d{ABSOLUTE} [%-6p] %40.40c - %m%n"/>
+        </Console>
+
+        <RollingFile name="rollingFile"
+             filePattern="${sys:user.home}/Solor/komet/logs/%d{ISO8601_BASIC}.log">
+  <PatternLayout pattern="%d{ABSOLUTE} [%-6p] %40.40c - %m%n"/>
+  <Policies>
+    <SizeBasedTriggeringPolicy size="10MB"/>
+    <OnStartupTriggeringPolicy minSize="0"/>
+  </Policies>
+  <DirectWriteRolloverStrategy>
+    <Delete basePath="${sys:user.home}/Solor/komet/logs">
+      <IfLastModified age="P30D"/>
+    </Delete>
+  </DirectWriteRolloverStrategy>
+</RollingFile>
+    </Appenders>
+
+    <Loggers>
+        <Root level="INFO">
+            <AppenderRef ref="console"/>
+            <AppenderRef ref="rollingFile"/>
+        </Root>
+    </Loggers>
+</Configuration>
