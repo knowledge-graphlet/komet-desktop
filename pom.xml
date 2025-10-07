@@ -1,13 +1,15 @@
-<project xmlns="http://maven.apache.org/POM/4.1.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.1.0 https://maven.apache.org/xsd/maven-4.1.0.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  xsi:schemaLocation="http://maven.apache.org/POM/4.1.0 https://maven.apache.org/xsd/maven-4.1.0.xsd">
     <modelVersion>4.1.0</modelVersion>
+
     <parent>
         <groupId>dev.ikm.ike</groupId>
         <artifactId>ike-pom</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </parent>
+
     <artifactId>komet-desktop</artifactId>
+
     <name>Komet Desktop</name>
 
     <properties>
@@ -16,7 +18,9 @@
         <maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
         <jpackage.app.name>Komet Desktop 2025-09-27s</jpackage.app.name>
         <jpackage.app.version>20250927.645.777</jpackage.app.version>
+        <asm.version>9.9</asm.version>
     </properties>
+
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -28,7 +32,6 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
-
     <dependencies>
         <dependency>
             <groupId>de.jangassen</groupId>
@@ -96,6 +99,11 @@
         <dependency>
             <groupId>dev.ikm.komet</groupId>
             <artifactId>executor</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.ikm.tinkar</groupId>
+            <artifactId>executor-provider</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>dev.ikm.tinkar</groupId>
@@ -192,7 +200,7 @@
         </dependency>
         <dependency>
             <groupId>dev.ikm.ike</groupId>
-            <artifactId>rocks-kb</artifactId>
+            <artifactId>rocks-kb-engine</artifactId>
         </dependency>
         <dependency>
             <groupId>dev.ikm.jpms</groupId>
@@ -244,7 +252,12 @@
             <artifactId>junit-platform-launcher</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>dev.ikm.jpms</groupId>
+            <artifactId>jheaps</artifactId>
+        </dependency>
     </dependencies>
+
     <build>
         <resources>
             <resource>
@@ -252,7 +265,6 @@
                 <filtering>true</filtering>
             </resource>
         </resources>
-
         <pluginManagement>
             <plugins>
                 <plugin>
@@ -312,31 +324,58 @@
                     </execution>
                 </executions>
             </plugin>
-
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-data</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>dev.ikm.tinkar.data</groupId>
+                                    <artifactId>tinkar-starter-data-reasoned</artifactId>
+                                    <classifier>pb</classifier>
+                                    <type>zip</type>
+                                    <version>1.0.0</version>
+                                    <overWrite>false</overWrite>
+                                    <outputDirectory>${project.build.directory}/data/Solor</outputDirectory>
+                                </artifactItem>
+                            </artifactItems>
+                            <overWriteReleases>false</overWriteReleases>
+                            <overWriteSnapshots>true</overWriteSnapshots>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <!-- Ensure Surefire can parse Java 25 class files by upgrading ASM in the plugin realm -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.2</version>
                 <configuration>
-                    <useModulePath>true</useModulePath>
+                    <useModulePath>false</useModulePath>
                 </configuration>
                 <dependencies>
                     <!-- ASM in plugin realm; pick a release that supports classfile major 69 (Java 25) -->
                     <dependency>
                         <groupId>org.ow2.asm</groupId>
                         <artifactId>asm</artifactId>
-                        <version>9.8</version>
+                        <version>${asm.version}</version>
                     </dependency>
                     <dependency>
                         <groupId>org.ow2.asm</groupId>
                         <artifactId>asm-tree</artifactId>
-                        <version>9.8</version>
+                        <version>${asm.version}</version>
                     </dependency>
                     <dependency>
                         <groupId>org.ow2.asm</groupId>
                         <artifactId>asm-commons</artifactId>
-                        <version>9.8</version>
+                        <version>${asm.version}</version>
                     </dependency>
                 </dependencies>
             </plugin>
@@ -367,6 +406,7 @@
             </plugin>
         </plugins>
     </build>
+
     <profiles>
         <profile>
             <id>scenic-view</id>
@@ -775,7 +815,7 @@
                         <artifactId>jpro-maven-plugin</artifactId>
                         <configuration>
                             <mainClassName>dev.ikm.komet.app.App</mainClassName>
-                            <useModuleSystem>true</useModuleSystem>
+                            <useModuleSystem>false</useModuleSystem>
                             <releaseName>komet</releaseName>
                             <releasePlatforms>
                                 <!-- Sets the platforms to be included in the zip generated via jpro:release -->
@@ -802,45 +842,6 @@
                                     <goal>release</goal>
                                 </goals>
                                 <phase>package</phase>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>integrationTestData</id>
-            <activation>
-                <property>
-                    <name>runITestFX</name>
-                </property>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-dependency-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>copy-data</id>
-                                <phase>pre-integration-test</phase>
-                                <goals>
-                                    <goal>copy</goal>
-                                </goals>
-                                <configuration>
-                                    <artifactItems>
-                                        <artifactItem>
-                                            <groupId>dev.ikm.tinkar.data</groupId>
-                                            <artifactId>tinkar-starter-data-reasoned</artifactId>
-                                            <classifier>pb</classifier>
-                                            <type>zip</type>
-                                            <overWrite>false</overWrite>
-                                            <outputDirectory>${project.build.directory}/data/Solor</outputDirectory>
-                                        </artifactItem>
-                                    </artifactItems>
-                                    <overWriteReleases>false</overWriteReleases>
-                                    <overWriteSnapshots>true</overWriteSnapshots>
-                                </configuration>
                             </execution>
                         </executions>
                     </plugin>

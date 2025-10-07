@@ -36,6 +36,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 import org.slf4j.Logger;
+import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
@@ -53,9 +54,8 @@ public class DataTypesViewModelTest {
     private static final Logger LOG = LoggerFactory.getLogger(DataTypesViewModelTest.class);
 
 
-    public void sartDataStore() {
-        LOG.info("Clear caches");
-        File dataStore = new File(System.getProperty("user.home") + "/Solor/testPBFile");
+    public void startDatastore() {
+        File dataStore = new File("target/testPBFile");
         CachingService.clearAll();
         LOG.info("Setup Ephemeral Suite: " + LOG.getName());
         LOG.info(ServiceProperties.jvmUuid());
@@ -66,18 +66,16 @@ public class DataTypesViewModelTest {
 
     @BeforeAll
     public void init(){
-        sartDataStore();
+        startDatastore();
         loadStarterData();
-
     }
 
     @AfterAll
     public void stopDB() {
         PrimitiveData.stop();
-        System.exit(0);
     }
 
-  //  @Test
+    @Test
     public void loadDataTypesTest(){
         Platform.startup(() -> {
             ViewProperties viewProperties = createViewProperties();
@@ -108,7 +106,8 @@ public class DataTypesViewModelTest {
         });
     }
 
-//    @Test
+    // If you also want this to run as a test, annotate it too.
+    // @Test
     public void loadDataTypesTest2(){
         Platform.startup(() -> {
             ViewProperties viewProperties = createViewProperties();
@@ -122,12 +121,11 @@ public class DataTypesViewModelTest {
     }
 
     private void loadStarterData() {
-        File pbFile = new File(System.getProperty("user.home") + "/Solor/tinkar-starter-data-reasoned-0.1-pb.zip");
+        File pbFile = new File("target/data/Solor/tinkar-starter-data-reasoned-1.0.0-pb.zip");
         LoadEntitiesFromProtobufFile loadProto = new LoadEntitiesFromProtobufFile(pbFile);
         EntityCountSummary count = loadProto.compute();
         LOG.info(count + " entitles loaded from file: " + loadProto.summarize() + "\n\n");
     }
-
 
     public static ViewProperties createViewProperties() {
         // TODO how do we get a viewProperties?
@@ -137,5 +135,4 @@ public class DataTypesViewModelTest {
         ViewProperties viewProperties = windowSettings.getView().makeOverridableViewProperties();
         return viewProperties;
     }
-
 }

@@ -35,9 +35,9 @@ module dev.ikm.komet.application {
     requires dev.ikm.tinkar.provider.spinedarray;
     requires dev.ikm.tinkar.provider.mvstore;
     requires dev.ikm.tinkar.provider.ephemeral;
-    requires ikm.rocks;
+    requires dev.ikm.rocks.engine;
     requires com.sun.jna;
-    requires com.sun.jna.platform;
+    //requires com.sun.jna.platform;
     requires dev.ikm.rocksdb.jpms;
     // End not happy...
 
