@@ -16,8 +16,8 @@
         <java.version>25</java.version>
         <!-- Configure build timestamp -->
         <maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
-        <jpackage.app.name>Komet Desktop 2025-10-07s</jpackage.app.name>
-        <jpackage.app.version>20251007.1945.777</jpackage.app.version>
+        <jpackage.app.name>Komet Desktop 2025-10-08s</jpackage.app.name>
+        <jpackage.app.version>20251008.1615.777</jpackage.app.version>
         <asm.version>9.9</asm.version>
     </properties>
 
