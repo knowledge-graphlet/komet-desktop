@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  xsi:schemaLocation="http://maven.apache.org/POM/4.1.0 https://maven.apache.org/xsd/maven-4.1.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.1.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.1.0 https://maven.apache.org/xsd/maven-4.1.0.xsd">
     <modelVersion>4.1.0</modelVersion>
 
     <parent>
-        <groupId>dev.ikm.ike</groupId>
-        <artifactId>ike-pom</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <groupId>dev.ikm.build</groupId>
+        <artifactId>java-parent</artifactId>
+        <version>1.67.0-dist-SNAPSHOT</version>
     </parent>
 
     <artifactId>komet-desktop</artifactId>
+    <version>3.0.0-SNAPSHOT</version>
 
     <name>Komet Desktop</name>
 
@@ -16,9 +19,17 @@
         <java.version>25</java.version>
         <!-- Configure build timestamp -->
         <maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
-        <jpackage.app.name>Komet Desktop 2025-10-08s</jpackage.app.name>
-        <jpackage.app.version>20251008.1615.777</jpackage.app.version>
+        <jpackage.app.name>Komet Desktop 2025-10-12s</jpackage.app.name>
+        <jpackage.app.version>20251012.0832.777</jpackage.app.version>
         <asm.version>9.9</asm.version>
+        <ike-bom.version>0.1.0-SNAPSHOT</ike-bom.version>
+        <!-- Default: skip signing. Enable with -Dgpg.sign=true -->
+        <gpg.sign.skip>true</gpg.sign.skip>
+
+        <compiler.args>--enable-preview</compiler.args>
+        <surefire.args>--enable-preview</surefire.args>
+        <failsafe.args>--enable-preview</failsafe.args>
+        <javadoc.args>--enable-preview</javadoc.args>
     </properties>
 
     <dependencyManagement>
@@ -26,13 +37,57 @@
             <dependency>
                 <groupId>dev.ikm.ike</groupId>
                 <artifactId>ike-bom</artifactId>
-                <version>${project.version}</version>
+                <version>${ike-bom.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
     <dependencies>
+        <dependency>
+            <groupId>dev.ikm.jpms</groupId>
+            <artifactId>apfloat</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.ikm.hybrid-reasoner</groupId>
+            <artifactId>hybrid-reasoner-snomed</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.ikm.elk</groupId>
+            <artifactId>elk-snomed</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.ikm.tinkar.ext.owl</groupId>
+            <artifactId>owl-extension</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.ikm.jpms</groupId>
+            <artifactId>mvstore</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.jgrapht</groupId>
+            <artifactId>jgrapht-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.ikm.jpms</groupId>
+            <artifactId>activej-bytebuf</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.ikm.tinkar</groupId>
+            <artifactId>tinkar-schema</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.ikm.tinkar</groupId>
+            <artifactId>collection</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.ikm.tinkar</groupId>
+            <artifactId>component</artifactId>
+        </dependency>
         <dependency>
             <groupId>de.jangassen</groupId>
             <artifactId>nsmenufx</artifactId>
@@ -116,6 +171,26 @@
         <dependency>
             <groupId>dev.ikm.tinkar</groupId>
             <artifactId>search-provider</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-queryparser</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-queries</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-highlighter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-suggest</artifactId>
         </dependency>
         <dependency>
             <groupId>dev.ikm.tinkar</groupId>
@@ -270,6 +345,7 @@
                 <plugin>
                     <groupId>org.openjfx</groupId>
                     <artifactId>javafx-maven-plugin</artifactId>
+                    <version>0.0.8</version>
                     <configuration>
                         <mainClass>dev.ikm.komet.application/dev.ikm.komet.app.App</mainClass>
                         <stripDebug>false</stripDebug>
@@ -283,9 +359,62 @@
                         </options>
                     </configuration>
                 </plugin>
+                <!-- Pin plugin versions locally so verify does not depend on parent pluginManagement -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.14.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <version>3.3.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <version>3.9.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.5.3</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-install-plugin</artifactId>
+                    <version>3.1.4</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-gpg-plugin</artifactId>
+                    <version>3.2.8</version>
+                </plugin>
             </plugins>
         </pluginManagement>
         <plugins>
+            <!-- Make signing opt-in: only runs when -Dgpg.sign=true is passed -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${gpg.sign.skip}</skip>
+                            <gpgArguments>
+                                <argument>--pinentry-mode</argument>
+                                <argument>loopback</argument>
+                            </gpgArguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <!-- Create numeric date/time parts -->
             <!-- Detect if this build is a -SNAPSHOT without CI flags -->
             <plugin>
@@ -395,10 +524,6 @@
                         <nonFilteredFileExtension>pdf</nonFilteredFileExtension>
                     </nonFilteredFileExtensions>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>buildnumber-maven-plugin</artifactId>
             </plugin>
             <plugin>
                 <groupId>org.openjfx</groupId>
@@ -700,7 +825,7 @@
                                     </outputDirectory>
                                 </configuration>
                             </execution>
-                         </executions>
+                        </executions>
                     </plugin>
                 </plugins>
             </build>
@@ -783,7 +908,8 @@
                                     <goal>copy-dependencies</goal>
                                 </goals>
                                 <configuration>
-                                    <outputDirectory>${project.build.directory}/kometRuntimeImage/module-jars</outputDirectory>
+                                    <outputDirectory>${project.build.directory}/kometRuntimeImage/module-jars
+                                    </outputDirectory>
                                 </configuration>
                             </execution>
                         </executions>
