@@ -279,7 +279,7 @@
         </dependency>
         <dependency>
             <groupId>dev.ikm.jpms</groupId>
-            <artifactId>rocksdbjni</artifactId>
+            <artifactId>rocksdbjni-jpms</artifactId>
             <version>10.4.2.r1-SNAPSHOT</version>
             <classifier>osx</classifier>
             <exclusions>
