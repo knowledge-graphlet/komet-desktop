@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.1.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.1.0 https://maven.apache.org/xsd/maven-4.1.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.1.0 https://maven.apache.org/xsd/maven-4.1.0.xsd"
+         root="true">
     <modelVersion>4.1.0</modelVersion>
 
     <parent>
@@ -19,8 +20,6 @@
         <java.version>25</java.version>
         <!-- Configure build timestamp -->
         <maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
-        <jpackage.app.name>Komet Desktop 2025-10-12s</jpackage.app.name>
-        <jpackage.app.version>20251012.0832.777</jpackage.app.version>
         <asm.version>9.9</asm.version>
         <ike-bom.version>0.1.0-SNAPSHOT</ike-bom.version>
         <!-- Default: skip signing. Enable with -Dgpg.sign=true -->
@@ -30,6 +29,8 @@
         <surefire.args>--enable-preview</surefire.args>
         <failsafe.args>--enable-preview</failsafe.args>
         <javadoc.args>--enable-preview</javadoc.args>
+        <!-- JProfiler agent path (auto-detected by platform) -->
+        <jprofiler.agent.path>/Applications/JProfiler.app/Contents/Resources/app/bin/macos/libjprofilerti.jnilib</jprofiler.agent.path>
     </properties>
 
     <dependencyManagement>
@@ -422,7 +423,48 @@
                 <artifactId>build-helper-maven-plugin</artifactId>
                 <version>3.5.0</version>
                 <executions>
-                    <!-- You already have timestamp-property executions for ver.major and ver.minor -->
+                    <!-- Create timestamp parts for version -->
+                    <execution>
+                        <id>timestamp-property-date</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>timestamp-property</goal>
+                        </goals>
+                        <configuration>
+                            <name>build.date</name>
+                            <pattern>yyyyMMdd</pattern>
+                            <locale>en_US</locale>
+                            <timeZone>UTC</timeZone>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>timestamp-property-time</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>timestamp-property</goal>
+                        </goals>
+                        <configuration>
+                            <name>build.time</name>
+                            <pattern>HHmm</pattern>
+                            <locale>en_US</locale>
+                            <timeZone>UTC</timeZone>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>timestamp-property-display-date</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>timestamp-property</goal>
+                        </goals>
+                        <configuration>
+                            <name>build.display.date</name>
+                            <pattern>yyyy-MM-dd</pattern>
+                            <locale>en_US</locale>
+                            <timeZone>UTC</timeZone>
+                        </configuration>
+                    </execution>
+
+                    <!-- Detect if this is a SNAPSHOT build -->
                     <execution>
                         <id>detect-snapshot</id>
                         <phase>initialize</phase>
@@ -430,25 +472,108 @@
                             <goal>regex-property</goal>
                         </goals>
                         <configuration>
-                            <name>snapshot</name>
+                            <name>is.snapshot</name>
                             <value>${project.version}</value>
                             <regex>.*-SNAPSHOT$</regex>
                             <replacement>true</replacement>
                             <failIfNoMatch>false</failIfNoMatch>
                         </configuration>
                     </execution>
+
+                    <!-- Set build qualifier to 777 if snapshot, 0 otherwise -->
                     <execution>
-                        <id>normalize-snapshot-false</id>
+                        <id>set-qualifier-snapshot</id>
                         <phase>initialize</phase>
                         <goals>
                             <goal>regex-property</goal>
                         </goals>
                         <configuration>
-                            <name>snapshot</name>
-                            <value>${snapshot}</value>
-                            <regex>^$</regex>
-                            <replacement>false</replacement>
+                            <name>build.qualifier</name>
+                            <value>${is.snapshot}</value>
+                            <regex>^true$</regex>
+                            <replacement>777</replacement>
                             <failIfNoMatch>false</failIfNoMatch>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>set-qualifier-release</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>regex-property</goal>
+                        </goals>
+                        <configuration>
+                            <name>build.qualifier</name>
+                            <value>${build.qualifier}</value>
+                            <regex>^$</regex>
+                            <replacement>0</replacement>
+                            <failIfNoMatch>false</failIfNoMatch>
+                        </configuration>
+                    </execution>
+
+                    <!-- Create jpackage.app.version -->
+                    <execution>
+                        <id>set-app-version</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>regex-property</goal>
+                        </goals>
+                        <configuration>
+                            <name>jpackage.app.version</name>
+                            <value>${build.date}.${build.time}.${build.qualifier}</value>
+                            <regex>^(.+)$</regex>
+                            <replacement>$1</replacement>
+                        </configuration>
+                    </execution>
+
+                    <!-- Create jpackage.app.name with date and time suffix -->
+                    <execution>
+                        <id>set-app-name-snapshot</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>regex-property</goal>
+                        </goals>
+                        <configuration>
+                            <name>jpackage.app.name</name>
+                            <value>${is.snapshot}</value>
+                            <regex>^true$</regex>
+                            <replacement>Komet Desktop ${build.display.date} ${build.time}s</replacement>
+                            <failIfNoMatch>false</failIfNoMatch>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>set-app-name-release</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>regex-property</goal>
+                        </goals>
+                        <configuration>
+                            <name>jpackage.app.name</name>
+                            <value>${jpackage.app.name}</value>
+                            <regex>^$</regex>
+                            <replacement>Komet Desktop ${build.display.date} ${build.time}</replacement>
+                            <failIfNoMatch>false</failIfNoMatch>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Optional: Echo the values to verify -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>echo-properties</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <echo message="JPackage App Name: ${jpackage.app.name}"/>
+                                <echo message="JPackage App Version: ${jpackage.app.version}"/>
+                                <echo message="Is Snapshot: ${is.snapshot}"/>
+                            </target>
                         </configuration>
                     </execution>
                 </executions>
@@ -485,9 +610,38 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.5.2</version>
+                <version>3.5.3</version>
                 <configuration>
                     <useModulePath>false</useModulePath>
+                    <classpathDependencyExcludes>
+                        <classpathDependencyExclude>dev.ikm.komet:executor</classpathDependencyExclude>
+                    </classpathDependencyExcludes>
+                </configuration>
+                <dependencies>
+                    <!-- ASM in plugin realm; pick a release that supports classfile major 69 (Java 25) -->
+                    <dependency>
+                        <groupId>org.ow2.asm</groupId>
+                        <artifactId>asm</artifactId>
+                        <version>${asm.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.ow2.asm</groupId>
+                        <artifactId>asm-tree</artifactId>
+                        <version>${asm.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.ow2.asm</groupId>
+                        <artifactId>asm-commons</artifactId>
+                        <version>${asm.version}</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>3.5.3</version>
+                <configuration>
+                    <useModulePath>false</useModulePath>
+                    <argLine>@{failsafeArgLine}</argLine>
                 </configuration>
                 <dependencies>
                     <!-- ASM in plugin realm; pick a release that supports classfile major 69 (Java 25) -->
@@ -558,7 +712,7 @@
         </profile>
         <!-- Profile to run JPackage to create installer(s), this profile can only be run with release versions-->
         <profile>
-            <id>create-installer</id>
+            <id>create-desktop-installer</id>
             <activation>
                 <activeByDefault>true</activeByDefault>
             </activation>
@@ -598,7 +752,7 @@
                         <executions>
                             <execution>
                                 <id>Installer</id>
-                                <phase>install</phase>
+                                <phase>verify</phase>
                                 <goals>
                                     <goal>jpackage</goal>
                                 </goals>
@@ -663,7 +817,7 @@
                             <execution>
                                 <!-- Configuration for profiling -->
                                 <id>profile</id>
-                                <phase>package</phase>
+                                <phase>package[1]</phase>
                                 <goals>
                                     <goal>jlink</goal>
                                 </goals>
@@ -672,12 +826,6 @@
                                     <jlinkImageName>kometProfileRuntimeImage</jlinkImageName>
                                     <jlinkVerbose>false</jlinkVerbose>
                                     <jlinkZipName>kometProfileJlink</jlinkZipName>
-                                    <extraFiles>
-                                        <file>
-                                            <source>${project.basedir}/src/main/resources/log4j2.xml</source>
-                                            <target>conf/log4j2.xml</target>
-                                        </file>
-                                    </extraFiles>
                                     <options>
                                         <option>--enable-preview</option>
                                         <option>-Xmx24g</option>
@@ -694,7 +842,11 @@
                                             -Djava.util.concurrent.ForkJoinPool.common.exceptionHandler=dev.ikm.tinkar.common.alert.UncaughtExceptionAlertStreamer
                                         </option>
                                         <option>
-                                            -agentpath:/Applications/JProfiler.app/Contents/Resources/app/bin/macos/libjprofilerti.jnilib=port=8849
+                                            -agentpath:${jprofiler.agent.path}=port=8849,nowait
+                                        </option>
+                                        <!-- Add remote debugging for IntelliJ source navigation -->
+                                        <option>
+                                            -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
                                         </option>
                                     </options>
                                 </configuration>
@@ -708,7 +860,7 @@
                         <executions>
                             <execution>
                                 <id>copy-log4j.prop-profile</id>
-                                <phase>package</phase>
+                                <phase>package[2]</phase>
                                 <goals>
                                     <goal>copy</goal>
                                 </goals>
@@ -725,7 +877,7 @@
                         <executions>
                             <execution>
                                 <id>copy-to-profile</id>
-                                <phase>package</phase>
+                                <phase>package[3]</phase>
                                 <goals>
                                     <goal>copy-dependencies</goal>
                                 </goals>
@@ -752,9 +904,8 @@
                         <executions>
                             <execution>
                                 <!-- Configuration for debugging -->
-                                <id>debug</id>
-                                <phase>package</phase>
-                                <!--                        <phase>none</phase>-->
+                                <id>jlink-debug</id>
+                                <phase>package[1]</phase>
                                 <goals>
                                     <goal>jlink</goal>
                                 </goals>
@@ -763,16 +914,9 @@
                                     <jlinkImageName>kometDebugRuntimeImage</jlinkImageName>
                                     <jlinkVerbose>true</jlinkVerbose>
                                     <jlinkZipName>kometDebugJlink</jlinkZipName>
-                                    <extraFiles>
-                                        <file>
-                                            <source>${project.basedir}/src/main/resources/log4j2.xml</source>
-                                            <target>conf/log4j2.xml</target>
-                                        </file>
-                                    </extraFiles>
                                     <options>
-                                        <option>-Dlog4j.configurationFile=../conf/log4j2.xml</option>
+                                        <option>-Dlog4j.configurationFile=$APPDIR/conf/log4j2.xml</option>
                                         <option>--enable-preview</option>
-                                        <option>-XX:+UseCompactObjectHeaders</option>
                                         <option>-Xmx24g</option>
                                         <option>-Xms24g</option>
                                         <option>--add-opens</option>
@@ -799,7 +943,7 @@
                         <executions>
                             <execution>
                                 <id>copy-log4j.prop-debug</id>
-                                <phase>package</phase>
+                                <phase>package[2]</phase>
                                 <goals>
                                     <goal>copy</goal>
                                 </goals>
@@ -816,7 +960,7 @@
                         <executions>
                             <execution>
                                 <id>copy-to-debug</id>
-                                <phase>package</phase>
+                                <phase>package[3]</phase>
                                 <goals>
                                     <goal>copy-dependencies</goal>
                                 </goals>
@@ -844,7 +988,7 @@
                             <execution>
                                 <!-- Default configuration for running -->
                                 <id>default-cli</id>
-                                <phase>package</phase>
+                                <phase>package[1]</phase>
                                 <goals>
                                     <goal>jlink</goal>
                                 </goals>
@@ -853,12 +997,6 @@
                                     <jlinkImageName>kometRuntimeImage</jlinkImageName>
                                     <jlinkVerbose>false</jlinkVerbose>
                                     <jlinkZipName>kometJlink</jlinkZipName>
-                                    <extraFiles>
-                                        <file>
-                                            <source>${project.basedir}/src/main/resources/log4j2.xml</source>
-                                            <target>conf/log4j2.xml</target>
-                                        </file>
-                                    </extraFiles>
                                     <options>
                                         <option>--enable-preview</option>
                                         <option>-Xmx24g</option>
@@ -886,7 +1024,7 @@
                         <executions>
                             <execution>
                                 <id>copy-log4j.prop-standard</id>
-                                <phase>package</phase>
+                                <phase>package[2]</phase>
                                 <goals>
                                     <goal>copy</goal>
                                 </goals>
@@ -903,7 +1041,7 @@
                         <executions>
                             <execution>
                                 <id>copy-to-launcher</id>
-                                <phase>package</phase>
+                                <phase>package[3]</phase>
                                 <goals>
                                     <goal>copy-dependencies</goal>
                                 </goals>
