@@ -6,6 +6,7 @@ import dev.ikm.tinkar.common.service.CachingService;
 import dev.ikm.tinkar.common.service.PrimitiveData;
 import dev.ikm.tinkar.common.service.ServiceKeys;
 import dev.ikm.tinkar.common.service.ServiceProperties;
+import dev.ikm.tinkar.coordinate.Calculators;
 import dev.ikm.tinkar.coordinate.Coordinates;
 import dev.ikm.tinkar.coordinate.language.calculator.LanguageCalculator;
 import dev.ikm.tinkar.coordinate.language.calculator.LanguageCalculatorWithCache;
@@ -110,8 +111,8 @@ public class GenericEditingTest {
         StringBuilder sb = new StringBuilder();
         fieldRecords.forEach(fieldRecord ->
                 sb.append("---Field Detail---").append("\n")
-                        .append(text(fieldRecord.meaningNid())).append(": ").append(fieldRecord.value().toString()).append("\n")
-                        .append("Hover Over: ").append(text(fieldRecord.purposeNid())).append("\n\n")
+                        .append(text(fieldRecord.fieldDefinition(Calculators.View.Default()).meaningNid())).append(": ").append(fieldRecord.value().toString()).append("\n")
+                        .append("Hover Over: ").append(text(fieldRecord.fieldDefinition(Calculators.View.Default()).purposeNid())).append("\n\n")
         );
         return sb.toString();
     }
@@ -124,7 +125,8 @@ public class GenericEditingTest {
                     semanticEntityVersion.fieldValues().get(i),
                     semanticEntityVersion.nid(),
                     semanticEntityVersion.stampNid(),
-                    fieldDefinitionForEntities.get(i))
+                    semanticEntityVersion.patternNid(),
+                    i)
             );
         }
         return fieldRecords;
