@@ -29,8 +29,18 @@
         <surefire.args>--enable-preview</surefire.args>
         <failsafe.args>--enable-preview</failsafe.args>
         <javadoc.args>--enable-preview</javadoc.args>
+
+        <!-- Default JPackage settings (overridden by OS profiles) -->
+        <jpackage.type>app-image</jpackage.type> <!-- Valid default, or use 'unknown' -->
+        <jpackage.icon>src/main/resources/icons/Komet.png</jpackage.icon>
+        <jpackage.resourceDir>installer_resources/resourceDir_unix</jpackage.resourceDir>
+        <jpackage.app.dest>target/dist/installer</jpackage.app.dest>
         <!-- JProfiler agent path (auto-detected by platform) -->
-        <jprofiler.agent.path>/Applications/JProfiler.app/Contents/Resources/app/bin/macos/libjprofilerti.jnilib</jprofiler.agent.path>
+        <jprofiler.agent.path>/Applications/JProfiler.app/Contents/Resources/app/bin/macos/libjprofilerti.jnilib
+        </jprofiler.agent.path>
+        <skip.image.standard>true</skip.image.standard>
+        <skip.image.profile>true</skip.image.profile>
+        <skip.image.debug>true</skip.image.debug>
     </properties>
 
     <dependencyManagement>
@@ -343,23 +353,6 @@
         </resources>
         <pluginManagement>
             <plugins>
-                <plugin>
-                    <groupId>org.openjfx</groupId>
-                    <artifactId>javafx-maven-plugin</artifactId>
-                    <version>0.0.8</version>
-                    <configuration>
-                        <mainClass>dev.ikm.komet.application/dev.ikm.komet.app.App</mainClass>
-                        <stripDebug>false</stripDebug>
-                        <compress>2</compress>
-                        <bindServices>true</bindServices>
-                        <noHeaderFiles>true</noHeaderFiles>
-                        <noManPages>true</noManPages>
-                        <ignoreSigningInformation>true</ignoreSigningInformation>
-                        <options>
-                            <option>-Xmx10g</option>
-                        </options>
-                    </configuration>
-                </plugin>
                 <!-- Pin plugin versions locally so verify does not depend on parent pluginManagement -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -369,12 +362,111 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-resources-plugin</artifactId>
-                    <version>3.3.1</version>
+                    <version>3.4.0</version>
+                    <configuration>
+                        <nonFilteredFileExtensions>
+                            <nonFilteredFileExtension>icns</nonFilteredFileExtension>
+                            <!-- Consider adding other binaries too -->
+                            <nonFilteredFileExtension>ico</nonFilteredFileExtension>
+                            <nonFilteredFileExtension>png</nonFilteredFileExtension>
+                            <nonFilteredFileExtension>jpg</nonFilteredFileExtension>
+                            <nonFilteredFileExtension>jpeg</nonFilteredFileExtension>
+                            <nonFilteredFileExtension>gif</nonFilteredFileExtension>
+                            <nonFilteredFileExtension>pdf</nonFilteredFileExtension>
+                        </nonFilteredFileExtensions>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-dependency-plugin</artifactId>
                     <version>3.9.0</version>
+                    <!--
+                       Configuration moved to Plugin Level.
+                       This allows all 'copy' executions (fetch-*) to inherit this list.
+                       The 'copy-dependencies' executions will safely ignore 'artifactItems'.
+                    -->
+                    <configuration>
+                        <overWriteReleases>false</overWriteReleases>
+                        <overWriteSnapshots>true</overWriteSnapshots>
+                        <artifactItems>
+                            <artifactItem>
+                                <groupId>dev.ikm.ike</groupId>
+                                <artifactId>rocks-kb-engine</artifactId>
+                            </artifactItem>
+                            <artifactItem>
+                                <groupId>dev.ikm.jpms</groupId>
+                                <artifactId>rocksdbjni-jpms</artifactId>
+                                <version>10.4.2.r1-SNAPSHOT</version>
+                            </artifactItem>
+                            <artifactItem>
+                                <groupId>dev.ikm.jpms</groupId>
+                                <artifactId>jna-jpms</artifactId>
+                            </artifactItem>
+                            <artifactItem>
+                                <groupId>dev.ikm.jpms</groupId>
+                                <artifactId>jna-platform-jpms</artifactId>
+                            </artifactItem>
+                        </artifactItems>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.openjfx</groupId>
+                    <artifactId>javafx-maven-plugin</artifactId>
+                    <version>0.0.8</version>
+                    <configuration>
+                        <!-- Shared Settings -->
+                        <mainClass>dev.ikm.komet.application/dev.ikm.komet.app.App</mainClass>
+                        <stripDebug>false</stripDebug>
+                        <compress>2</compress>
+                        <bindServices>true</bindServices>
+                        <noHeaderFiles>true</noHeaderFiles>
+                        <noManPages>true</noManPages>
+                        <ignoreSigningInformation>true</ignoreSigningInformation>
+                        <!-- Base Options (Common to Standard, Debug, and Profile) -->
+                        <options>
+                            <option>--enable-preview</option>
+                            <option>-Xmx24g</option>
+                            <option>-Dlog4j.configurationFile=$APPDIR/conf/log4j2.xml</option>
+                            <option>--add-opens</option>
+                            <option>javafx.graphics/javafx.scene=org.controlsfx.controls</option>
+                            <option>--add-exports</option>
+                            <option>javafx.controls/com.sun.javafx.scene.control.behavior=dev.ikm.komet.navigator
+                            </option>
+                            <option>--add-exports</option>
+                            <option>javafx.base/com.sun.javafx.event=one.jpro.platform.file</option>
+                            <option>
+                                -Djava.util.concurrent.ForkJoinPool.common.exceptionHandler=dev.ikm.tinkar.common.alert.UncaughtExceptionAlertStreamer
+                            </option>
+                        </options>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.panteleyev</groupId>
+                    <artifactId>jpackage-maven-plugin</artifactId>
+                    <version>1.6.0</version> <!-- Pin the version -->
+                    <configuration>
+                        <name>${jpackage.app.name}</name>
+                        <appVersion>${jpackage.app.version}</appVersion>
+                        <destination>${jpackage.app.dest}</destination>
+                        <resourceDir>${jpackage.resourceDir}</resourceDir>
+                        <type>${jpackage.type}</type>
+                        <icon>${jpackage.icon}</icon>
+                        <vendor>IKM</vendor>
+                        <runtimeImage>target/kometRuntimeImage</runtimeImage>
+                        <module>dev.ikm.komet.application/dev.ikm.komet.app.App</module>
+                        <winMenu>true</winMenu>
+                        <javaOptions>
+                            <option>--enable-preview</option>
+                            <option>-Xmx24g</option>
+                            <option>--add-opens</option>
+                            <option>javafx.graphics/javafx.scene=org.controlsfx.controls</option>
+                            <option>--add-exports</option>
+                            <option>javafx.controls/com.sun.javafx.scene.control.behavior=dev.ikm.komet.navigator
+                            </option>
+                            <option>--add-exports</option>
+                            <option>javafx.base/com.sun.javafx.event=one.jpro.platform.file</option>
+                        </javaOptions>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -394,6 +486,219 @@
             </plugins>
         </pluginManagement>
         <plugins>
+            <plugin>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <executions>
+                    <!-- 1. STANDARD -->
+                    <execution>
+                        <id>jlink-standard</id>
+                        <phase>package[1]</phase>
+                        <goals>
+                            <goal>jlink</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.image.standard}</skip>
+                            <launcher>launchKomet</launcher>
+                            <jlinkImageName>kometRuntimeImage</jlinkImageName>
+                            <jlinkZipName>kometJlink</jlinkZipName>
+                            <jlinkVerbose>false</jlinkVerbose>
+                            <!-- Inherits options from pluginManagement -->
+                        </configuration>
+                    </execution>
+
+                    <!-- 2. PROFILE -->
+                    <execution>
+                        <id>jlink-profile</id>
+                        <phase>package[1]</phase>
+                        <goals>
+                            <goal>jlink</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.image.profile}</skip>
+                            <launcher>profileKomet</launcher>
+                            <jlinkImageName>kometProfileRuntimeImage</jlinkImageName>
+                            <jlinkZipName>kometProfileJlink</jlinkZipName>
+                            <jlinkVerbose>false</jlinkVerbose>
+
+                            <!-- APPENDS these options to the base list -->
+                            <options combine.children="append">
+                                <option>-agentpath:${jprofiler.agent.path}=port=8849,nowait</option>
+                                <option>-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005</option>
+                            </options>
+                        </configuration>
+                    </execution>
+
+                    <!-- 3. DEBUG -->
+                    <execution>
+                        <id>jlink-debug</id>
+                        <phase>package[1]</phase>
+                        <goals>
+                            <goal>jlink</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.image.debug}</skip>
+                            <launcher>debugKomet</launcher>
+                            <jlinkImageName>kometDebugRuntimeImage</jlinkImageName>
+                            <jlinkZipName>kometDebugJlink</jlinkZipName>
+                            <jlinkVerbose>false</jlinkVerbose>
+
+                            <!-- APPENDS these options to the base list -->
+                            <options combine.children="append">
+                                <option>-Xms24g</option>
+                                <option>-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:8000</option>
+                            </options>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <!-- Execution 1: Standard -->
+                    <execution>
+                        <id>copy-log4j-standard</id>
+                        <phase>package[2]</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.image.standard}</skip>
+                            <outputDirectory>${project.build.directory}/kometRuntimeImage/conf</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>src/main/resources</directory>
+                                    <includes>
+                                        <include>log4j2.xml</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+
+                    <!-- Execution 2: Debug -->
+                    <execution>
+                        <id>copy-log4j-debug</id>
+                        <phase>package[2]</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.image.debug}</skip>
+                            <outputDirectory>${project.build.directory}/kometDebugRuntimeImage/conf</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>src/main/resources</directory>
+                                    <includes>
+                                        <include>log4j2.xml</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+
+                    <!-- Execution 3: Profile -->
+                    <execution>
+                        <id>copy-log4j-profile</id>
+                        <phase>package[2]</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.image.profile}</skip>
+                            <outputDirectory>${project.build.directory}/kometProfileRuntimeImage/conf</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>src/main/resources</directory>
+                                    <includes>
+                                        <include>log4j2.xml</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-standard-module-dependencies</id>
+                        <phase>package[3]</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.image.standard}</skip>
+                            <outputDirectory>${project.build.directory}/kometRuntimeImage/module-jars</outputDirectory>
+                            <!-- artifactItems are INHERITED from pluginManagement! -->
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>copy-debug-module-dependencies</id>
+                        <phase>package[3]</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.image.debug}</skip>
+                            <outputDirectory>${project.build.directory}/kometDebugRuntimeImage/module-jars
+                            </outputDirectory>
+                            <!-- artifactItems are INHERITED from pluginManagement! -->
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>copy-profile-module-dependencies</id>
+                        <phase>package[3]</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.image.profile}</skip>
+                            <outputDirectory>${project.build.directory}/kometProfileRuntimeImage/module-jars
+                            </outputDirectory>
+                            <!-- artifactItems are INHERITED from pluginManagement! -->
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>fetch-standard-application-extensions</id>
+                        <phase>package[4]</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.image.standard}</skip>
+                            <outputDirectory>${project.build.directory}/kometRuntimeImage/plugins</outputDirectory>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>fetch-debug-application-extensions</id>
+                        <phase>package[4]</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.image.debug}</skip>
+                            <outputDirectory>${project.build.directory}/kometDebugRuntimeImage/plugins</outputDirectory>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>fetch-profile-application-extensions</id>
+                        <phase>package[4]</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.image.profile}</skip>
+                            <outputDirectory>${project.build.directory}/kometProfileRuntimeImage/plugins
+                            </outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <!-- Make signing opt-in: only runs when -Dgpg.sign=true is passed -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -578,34 +883,6 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>copy-data</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>copy</goal>
-                        </goals>
-                        <configuration>
-                            <artifactItems>
-                                <artifactItem>
-                                    <groupId>dev.ikm.tinkar.data</groupId>
-                                    <artifactId>tinkar-starter-data-reasoned</artifactId>
-                                    <classifier>pb</classifier>
-                                    <type>zip</type>
-                                    <version>1.0.0</version>
-                                    <overWrite>false</overWrite>
-                                    <outputDirectory>${project.build.directory}/data/Solor</outputDirectory>
-                                </artifactItem>
-                            </artifactItems>
-                            <overWriteReleases>false</overWriteReleases>
-                            <overWriteSnapshots>true</overWriteSnapshots>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
             <!-- Ensure Surefire can parse Java 25 class files by upgrading ASM in the plugin realm -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -662,27 +939,6 @@
                     </dependency>
                 </dependencies>
             </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-resources-plugin</artifactId>
-                <version>3.3.1</version>
-                <configuration>
-                    <nonFilteredFileExtensions>
-                        <nonFilteredFileExtension>icns</nonFilteredFileExtension>
-                        <!-- Consider adding other binaries too -->
-                        <nonFilteredFileExtension>ico</nonFilteredFileExtension>
-                        <nonFilteredFileExtension>png</nonFilteredFileExtension>
-                        <nonFilteredFileExtension>jpg</nonFilteredFileExtension>
-                        <nonFilteredFileExtension>jpeg</nonFilteredFileExtension>
-                        <nonFilteredFileExtension>gif</nonFilteredFileExtension>
-                        <nonFilteredFileExtension>pdf</nonFilteredFileExtension>
-                    </nonFilteredFileExtensions>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.openjfx</groupId>
-                <artifactId>javafx-maven-plugin</artifactId>
-            </plugin>
         </plugins>
     </build>
 
@@ -718,37 +974,14 @@
             </activation>
             <properties>
                 <jpackage.app.dest>target/dist/installer</jpackage.app.dest>
+                <!-- Ensure the standard image is generated for the installer to consume -->
+                <skip.image.standard>false</skip.image.standard>
             </properties>
             <build>
                 <plugins>
                     <plugin>
                         <groupId>org.panteleyev</groupId>
                         <artifactId>jpackage-maven-plugin</artifactId>
-                        <configuration>
-                            <name>${jpackage.app.name}</name>
-                            <appVersion>${jpackage.app.version}</appVersion>
-                            <!-- Requires Semantic Versioning with major version > zero -->
-                            <destination>${jpackage.app.dest}</destination>
-                            <resourceDir>${jpackage.resourceDir}</resourceDir>
-                            <type>${jpackage.type}</type>
-                            <icon>${jpackage.icon}</icon>
-                            <vendor>IKM</vendor>
-                            <runtimeImage>target/kometRuntimeImage</runtimeImage>
-                            <module>dev.ikm.komet.application/dev.ikm.komet.app.App</module>
-                            <javaOptions>
-                                <option>--enable-preview</option>
-                                <option>-Xmx24g</option>
-                                <option>--add-opens</option>
-                                <option>javafx.graphics/javafx.scene=org.controlsfx.controls</option>
-                                <option>--add-exports</option>
-                                <option>javafx.controls/com.sun.javafx.scene.control.behavior=dev.ikm.komet.navigator
-                                </option>
-                                <option>--add-exports</option>
-                                <option>javafx.base/com.sun.javafx.event=one.jpro.platform.file</option>
-                            </javaOptions>
-                            <!-- Windows Options - ignored by other Operating Systems -->
-                            <winMenu>true</winMenu>
-                        </configuration>
                         <executions>
                             <execution>
                                 <id>Installer</id>
@@ -808,309 +1041,27 @@
             <activation>
                 <activeByDefault>false</activeByDefault>
             </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.openjfx</groupId>
-                        <artifactId>javafx-maven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <!-- Configuration for profiling -->
-                                <id>profile</id>
-                                <phase>package[1]</phase>
-                                <goals>
-                                    <goal>jlink</goal>
-                                </goals>
-                                <configuration>
-                                    <launcher>profileKomet</launcher>
-                                    <jlinkImageName>kometProfileRuntimeImage</jlinkImageName>
-                                    <jlinkVerbose>false</jlinkVerbose>
-                                    <jlinkZipName>kometProfileJlink</jlinkZipName>
-                                    <options>
-                                        <option>--enable-preview</option>
-                                        <option>-Xmx24g</option>
-                                        <option>-Dlog4j.configurationFile=$APPDIR/conf/log4j2.xml</option>
-                                        <option>--add-opens</option>
-                                        <option>javafx.graphics/javafx.scene=org.controlsfx.controls</option>
-                                        <option>--add-exports</option>
-                                        <option>
-                                            javafx.controls/com.sun.javafx.scene.control.behavior=dev.ikm.komet.navigator
-                                        </option>
-                                        <option>--add-exports</option>
-                                        <option>javafx.base/com.sun.javafx.event=one.jpro.platform.file</option>
-                                        <option>
-                                            -Djava.util.concurrent.ForkJoinPool.common.exceptionHandler=dev.ikm.tinkar.common.alert.UncaughtExceptionAlertStreamer
-                                        </option>
-                                        <option>
-                                            -agentpath:${jprofiler.agent.path}=port=8849,nowait
-                                        </option>
-                                        <!-- Add remote debugging for IntelliJ source navigation -->
-                                        <option>
-                                            -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
-                                        </option>
-                                    </options>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>com.coderplus.maven.plugins</groupId>
-                        <artifactId>copy-rename-maven-plugin</artifactId>
-                        <version>1.0</version>
-                        <executions>
-                            <execution>
-                                <id>copy-log4j.prop-profile</id>
-                                <phase>package[2]</phase>
-                                <goals>
-                                    <goal>copy</goal>
-                                </goals>
-                                <configuration>
-                                    <sourceFile>src/main/resources/log4j2.xml</sourceFile>
-                                    <destinationFile>target/kometProfileRuntimeImage/conf/log4j2.xml</destinationFile>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-dependency-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>copy-to-profile</id>
-                                <phase>package[3]</phase>
-                                <goals>
-                                    <goal>copy-dependencies</goal>
-                                </goals>
-                                <configuration>
-                                    <outputDirectory>${project.build.directory}/kometProfileRuntimeImage/module-jars
-                                    </outputDirectory>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
+            <properties>
+                <skip.image.profile>false</skip.image.profile>
+            </properties>
         </profile>
         <profile>
             <id>jlink-debug</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
             </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.openjfx</groupId>
-                        <artifactId>javafx-maven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <!-- Configuration for debugging -->
-                                <id>jlink-debug</id>
-                                <phase>package[1]</phase>
-                                <goals>
-                                    <goal>jlink</goal>
-                                </goals>
-                                <configuration>
-                                    <launcher>debugKomet</launcher>
-                                    <jlinkImageName>kometDebugRuntimeImage</jlinkImageName>
-                                    <jlinkVerbose>true</jlinkVerbose>
-                                    <jlinkZipName>kometDebugJlink</jlinkZipName>
-                                    <options>
-                                        <option>-Dlog4j.configurationFile=$APPDIR/conf/log4j2.xml</option>
-                                        <option>--enable-preview</option>
-                                        <option>-Xmx24g</option>
-                                        <option>-Xms24g</option>
-                                        <option>--add-opens</option>
-                                        <option>javafx.graphics/javafx.scene=org.controlsfx.controls</option>
-                                        <option>--add-exports</option>
-                                        <option>
-                                            javafx.controls/com.sun.javafx.scene.control.behavior=dev.ikm.komet.navigator
-                                        </option>
-                                        <option>
-                                            -Djava.util.concurrent.ForkJoinPool.common.exceptionHandler=dev.ikm.tinkar.common.alert.UncaughtExceptionAlertStreamer
-                                        </option>
-                                        <option>
-                                            -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:8000
-                                        </option>
-                                    </options>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>com.coderplus.maven.plugins</groupId>
-                        <artifactId>copy-rename-maven-plugin</artifactId>
-                        <version>1.0</version>
-                        <executions>
-                            <execution>
-                                <id>copy-log4j.prop-debug</id>
-                                <phase>package[2]</phase>
-                                <goals>
-                                    <goal>copy</goal>
-                                </goals>
-                                <configuration>
-                                    <sourceFile>src/main/resources/log4j2.xml</sourceFile>
-                                    <destinationFile>target/kometDebugRuntimeImage/conf/log4j2.xml</destinationFile>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-dependency-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>copy-to-debug</id>
-                                <phase>package[3]</phase>
-                                <goals>
-                                    <goal>copy-dependencies</goal>
-                                </goals>
-                                <configuration>
-                                    <outputDirectory>${project.build.directory}/kometDebugRuntimeImage/module-jars
-                                    </outputDirectory>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
+            <properties>
+                <skip.image.debug>false</skip.image.debug>
+            </properties>
         </profile>
         <profile>
             <id>jlink-standard</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
             </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.openjfx</groupId>
-                        <artifactId>javafx-maven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <!-- Default configuration for running -->
-                                <id>default-cli</id>
-                                <phase>package[1]</phase>
-                                <goals>
-                                    <goal>jlink</goal>
-                                </goals>
-                                <configuration>
-                                    <launcher>launchKomet</launcher>
-                                    <jlinkImageName>kometRuntimeImage</jlinkImageName>
-                                    <jlinkVerbose>false</jlinkVerbose>
-                                    <jlinkZipName>kometJlink</jlinkZipName>
-                                    <options>
-                                        <option>--enable-preview</option>
-                                        <option>-Xmx24g</option>
-                                        <option>-Dlog4j.configurationFile=$APPDIR/conf/log4j2.xml</option>
-                                        <option>--add-opens</option>
-                                        <option>javafx.graphics/javafx.scene=org.controlsfx.controls</option>
-                                        <option>--add-exports</option>
-                                        <option>
-                                            javafx.controls/com.sun.javafx.scene.control.behavior=dev.ikm.komet.navigator
-                                        </option>
-                                        <option>--add-exports</option>
-                                        <option>javafx.base/com.sun.javafx.event=one.jpro.platform.file</option>
-                                        <option>
-                                            -Djava.util.concurrent.ForkJoinPool.common.exceptionHandler=dev.ikm.tinkar.common.alert.UncaughtExceptionAlertStreamer
-                                        </option>
-                                    </options>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>com.coderplus.maven.plugins</groupId>
-                        <artifactId>copy-rename-maven-plugin</artifactId>
-                        <version>1.0</version>
-                        <executions>
-                            <execution>
-                                <id>copy-log4j.prop-standard</id>
-                                <phase>package[2]</phase>
-                                <goals>
-                                    <goal>copy</goal>
-                                </goals>
-                                <configuration>
-                                    <sourceFile>src/main/resources/log4j2.xml</sourceFile>
-                                    <destinationFile>target/kometRuntimeImage/conf/log4j2.xml</destinationFile>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-dependency-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>copy-to-launcher</id>
-                                <phase>package[3]</phase>
-                                <goals>
-                                    <goal>copy-dependencies</goal>
-                                </goals>
-                                <configuration>
-                                    <outputDirectory>${project.build.directory}/kometRuntimeImage/module-jars
-                                    </outputDirectory>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>jpro</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <pluginRepositories>
-                <pluginRepository>
-                    <id>jpro-repository</id>
-                    <url>https://sandec.jfrog.io/artifactory/repo</url>
-                </pluginRepository>
-            </pluginRepositories>
-            <repositories>
-                <repository>
-                    <id>jpro-repository</id>
-                    <url>https://sandec.jfrog.io/artifactory/repo</url>
-                </repository>
-            </repositories>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>one.jpro</groupId>
-                        <artifactId>jpro-maven-plugin</artifactId>
-                        <configuration>
-                            <mainClassName>dev.ikm.komet.app.App</mainClassName>
-                            <useModuleSystem>false</useModuleSystem>
-                            <releaseName>komet</releaseName>
-                            <releasePlatforms>
-                                <!-- Sets the platforms to be included in the zip generated via jpro:release -->
-                                <releasePlatform>linux</releasePlatform> <!-- includes linux x64 builds -->
-                                <releasePlatform>linux-aarch64</releasePlatform> <!-- includes linux aarch64 builds -->
-                            </releasePlatforms>
-                            <JVMArgs>
-                                <JVMArg>-Xmx16g</JVMArg>
-                                <JVMArg>--add-opens</JVMArg>
-                                <JVMArg>javafx.graphics/javafx.scene=org.controlsfx.controls</JVMArg>
-                                <JVMArg>--add-exports</JVMArg>
-                                <JVMArg>javafx.controls/com.sun.javafx.scene.control.behavior=dev.ikm.komet.navigator
-                                </JVMArg>
-                                <JVMArg>--add-exports</JVMArg>
-                                <JVMArg>javafx.base/com.sun.javafx.event=one.jpro.platform.file</JVMArg>
-                                <JVMArg>
-                                    -Djava.util.concurrent.ForkJoinPool.common.exceptionHandler=dev.ikm.tinkar.common.alert.UncaughtExceptionAlertStreamer
-                                </JVMArg>
-                            </JVMArgs>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <goals>
-                                    <goal>release</goal>
-                                </goals>
-                                <phase>package</phase>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
+            <properties>
+                <skip.image.standard>false</skip.image.standard>
+            </properties>
         </profile>
     </profiles>
 </project>
