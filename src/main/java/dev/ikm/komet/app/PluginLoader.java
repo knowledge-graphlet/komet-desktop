@@ -161,11 +161,18 @@ public class PluginLoader {
      * @return the resolved plugin directory path
      */
     private static Path resolveDefaultPluginPath() {
+        Path userDir = Path.of(System.getProperty("user.dir"));
+        
+        // First, check if we're running from a jlink image's bin directory
+        // If so, the plugins directory is ../plugins relative to bin
+        Path jlinkPluginPath = userDir.getParent().resolve("plugins");
+        if (Files.exists(jlinkPluginPath)) {
+            LOG.debug("Using jlink image plugin directory: {}", jlinkPluginPath);
+            return jlinkPluginPath;
+        }
+        
         // For local maven builds, use the target/plugins directory
-        Path localPluginPath = Path.of(System.getProperty("user.dir"))
-                .resolve("target")
-                .resolve("plugins");
-
+        Path localPluginPath = userDir.resolve("target").resolve("plugins");
         if (Files.exists(localPluginPath)) {
             LOG.debug("Using local build plugin directory: {}", localPluginPath);
             return localPluginPath;
@@ -178,9 +185,9 @@ public class PluginLoader {
             return installedPluginPath;
         }
 
-        // Default to local target directory (will be created if doesn't exist)
-        LOG.debug("Using default plugin directory: {}", localPluginPath);
-        return localPluginPath;
+        // Default to jlink plugin path (will be created if doesn't exist)
+        LOG.debug("Using default plugin directory: {}", jlinkPluginPath);
+        return jlinkPluginPath;
     }
 
     /**

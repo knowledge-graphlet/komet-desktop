@@ -227,14 +227,6 @@ public class AppMenu {
     private Menu createPluginMenu() {
         Menu pluginMenu = new Menu("Plugins");
         // Use ServiceLoader to discover KlSupplementalArea.Factory implementations
-        ServiceLoader<KlArea.Factory> builtInLoader = ServiceLoader.load(KlArea.Factory.class);
-        // Log the discovered factories
-        LOG.info("Discovering built-in factories...");
-        builtInLoader.forEach(factory -> {
-            String factoryClassName = factory.getClass().getName();
-            LOG.info("Discovered factory: {}", factoryClassName);
-            pluginMenu.getItems().add(new MenuItem("Built-in " + factoryClassName));
-        });
 
         ServiceLoader<KlArea.Factory> pluginLoader = PluggableService.load(KlArea.Factory.class);
 
