@@ -6,9 +6,9 @@
     <modelVersion>4.1.0</modelVersion>
 
     <parent>
-        <groupId>dev.ikm.build</groupId>
-        <artifactId>java-parent</artifactId>
-        <version>1.73.0</version>
+        <groupId>dev.ikm.komet.plugins</groupId>
+        <artifactId>plugin-incubator</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>komet-desktop</artifactId>
@@ -30,6 +30,7 @@
         <failsafe.args>--enable-preview</failsafe.args>
         <javadoc.args>--enable-preview</javadoc.args>
 
+        <plugin-service-loader.version>1.0.0-SNAPSHOT</plugin-service-loader.version>
         <!-- Default JPackage settings (overridden by OS profiles) -->
         <jpackage.type>app-image</jpackage.type> <!-- Valid default, or use 'unknown' -->
         <jpackage.icon>src/main/resources/icons/Komet.png</jpackage.icon>
@@ -55,6 +56,11 @@
         </dependencies>
     </dependencyManagement>
     <dependencies>
+        <dependency>
+            <groupId>dev.ikm</groupId>
+            <artifactId>plugin-layer</artifactId>
+            <version>${plugin-service-loader.version}</version>
+        </dependency>
         <dependency>
             <groupId>dev.ikm.jpms</groupId>
             <artifactId>apfloat</artifactId>
@@ -390,21 +396,9 @@
                         <overWriteSnapshots>true</overWriteSnapshots>
                         <artifactItems>
                             <artifactItem>
-                                <groupId>dev.ikm.ike</groupId>
-                                <artifactId>rocks-kb-engine</artifactId>
-                            </artifactItem>
-                            <artifactItem>
-                                <groupId>dev.ikm.jpms</groupId>
-                                <artifactId>rocksdbjni-jpms</artifactId>
-                                <version>10.4.2.r1-SNAPSHOT</version>
-                            </artifactItem>
-                            <artifactItem>
-                                <groupId>dev.ikm.jpms</groupId>
-                                <artifactId>jna-jpms</artifactId>
-                            </artifactItem>
-                            <artifactItem>
-                                <groupId>dev.ikm.jpms</groupId>
-                                <artifactId>jna-platform-jpms</artifactId>
+                                <groupId>dev.ikm.komet.plugins</groupId>
+                                <artifactId>komet-plugins</artifactId>
+                                <version>1.0.0-example-SNAPSHOT</version>
                             </artifactItem>
                         </artifactItems>
                     </configuration>
@@ -624,6 +618,9 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
                 <executions>
+                    <!-- ============================================ -->
+                    <!-- STANDARD IMAGE EXECUTIONS -->
+                    <!-- ============================================ -->
                     <execution>
                         <id>copy-standard-module-dependencies</id>
                         <phase>package[3]</phase>
@@ -636,6 +633,41 @@
                             <!-- artifactItems are INHERITED from pluginManagement! -->
                         </configuration>
                     </execution>
+
+                    <execution>
+                        <id>fetch-standard-plugin-service-loader</id>
+                        <phase>package[3]</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.image.standard}</skip>
+                            <outputDirectory>${project.build.directory}/kometRuntimeImage/plugin-service-loader</outputDirectory>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>dev.ikm.plugin</groupId>
+                                    <artifactId>plugin-service-loader</artifactId>
+                                    <version>${plugin-service-loader.version}</version>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>fetch-standard-application-extensions</id>
+                        <phase>package[4]</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.image.standard}</skip>
+                            <outputDirectory>${project.build.directory}/kometRuntimeImage/plugins</outputDirectory>
+                        </configuration>
+                    </execution>
+
+                    <!-- ============================================ -->
+                    <!-- DEBUG IMAGE EXECUTIONS -->
+                    <!-- ============================================ -->
                     <execution>
                         <id>copy-debug-module-dependencies</id>
                         <phase>package[3]</phase>
@@ -649,6 +681,41 @@
                             <!-- artifactItems are INHERITED from pluginManagement! -->
                         </configuration>
                     </execution>
+
+                    <execution>
+                        <id>fetch-debug-plugin-service-loader</id>
+                        <phase>package[3]</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.image.debug}</skip>
+                            <outputDirectory>${project.build.directory}/kometDebugRuntimeImage/plugin-service-loader</outputDirectory>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>dev.ikm.plugin</groupId>
+                                    <artifactId>plugin-service-loader</artifactId>
+                                    <version>${plugin-service-loader.version}</version>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>fetch-debug-application-extensions</id>
+                        <phase>package[4]</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skip.image.debug}</skip>
+                            <outputDirectory>${project.build.directory}/kometDebugRuntimeImage/plugins</outputDirectory>
+                        </configuration>
+                    </execution>
+
+                    <!-- ============================================ -->
+                    <!-- PROFILE IMAGE EXECUTIONS -->
+                    <!-- ============================================ -->
                     <execution>
                         <id>copy-profile-module-dependencies</id>
                         <phase>package[3]</phase>
@@ -662,28 +729,26 @@
                             <!-- artifactItems are INHERITED from pluginManagement! -->
                         </configuration>
                     </execution>
+
                     <execution>
-                        <id>fetch-standard-application-extensions</id>
-                        <phase>package[4]</phase>
+                        <id>fetch-profile-plugin-service-loader</id>
+                        <phase>package[3]</phase>
                         <goals>
                             <goal>copy</goal>
                         </goals>
                         <configuration>
-                            <skip>${skip.image.standard}</skip>
-                            <outputDirectory>${project.build.directory}/kometRuntimeImage/plugins</outputDirectory>
+                            <skip>${skip.image.profile}</skip>
+                            <outputDirectory>${project.build.directory}/kometProfileRuntimeImage/plugin-service-loader</outputDirectory>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>dev.ikm.plugin</groupId>
+                                    <artifactId>plugin-service-loader</artifactId>
+                                    <version>${plugin-service-loader.version}</version>
+                                </artifactItem>
+                            </artifactItems>
                         </configuration>
                     </execution>
-                    <execution>
-                        <id>fetch-debug-application-extensions</id>
-                        <phase>package[4]</phase>
-                        <goals>
-                            <goal>copy</goal>
-                        </goals>
-                        <configuration>
-                            <skip>${skip.image.debug}</skip>
-                            <outputDirectory>${project.build.directory}/kometDebugRuntimeImage/plugins</outputDirectory>
-                        </configuration>
-                    </execution>
+
                     <execution>
                         <id>fetch-profile-application-extensions</id>
                         <phase>package[4]</phase>

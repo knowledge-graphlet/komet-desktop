@@ -203,6 +203,16 @@ public class App extends Application  {
 
         LOG.info("Starting Komet");
 
+
+        // Initialize plugin system early
+        try {
+            Path pluginPath = PluginLoader.initialize();
+            LOG.info("Plugin system initialized at: {}", pluginPath);
+        } catch (Exception e) {
+            LOG.error("Failed to initialize plugin system", e);
+            // Decide if this should be fatal or if app can continue without plugins
+        }
+
         // Set system properties for macOS look and feel and application name in the menu bar
         configureMacOSProperties();
 

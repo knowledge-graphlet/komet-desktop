@@ -10,8 +10,11 @@ import dev.ikm.komet.framework.preferences.KometPreferencesStage;
 import dev.ikm.komet.framework.window.WindowSettings;
 import dev.ikm.komet.kview.mvvm.view.changeset.ExportController;
 import dev.ikm.komet.kview.mvvm.view.changeset.ImportController;
+import dev.ikm.komet.layout.KlArea;
+import dev.ikm.komet.layout.area.KlSupplementalArea;
 import dev.ikm.komet.preferences.KometPreferences;
 import dev.ikm.komet.preferences.KometPreferencesImpl;
+import dev.ikm.tinkar.common.service.PluggableService;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
@@ -41,6 +44,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.util.ServiceLoader;
 import java.util.prefs.BackingStoreException;
 
 import static dev.ikm.komet.app.App.*;
@@ -213,12 +217,38 @@ public class AppMenu {
 
         menuBar.getMenus().add(fileMenu);
         menuBar.getMenus().add(viewMenu);
+        menuBar.getMenus().add(createPluginMenu());
         menuBar.getMenus().add(windowMenu);
         menuBar.getMenus().add(exchangeMenu);
         //menuBar.getMenus().add(createDevMenu(landingPageRoot));
         landingPageRoot.setTop(menuBar);
     }
 
+    private Menu createPluginMenu() {
+        Menu pluginMenu = new Menu("Plugins");
+        // Use ServiceLoader to discover KlSupplementalArea.Factory implementations
+        ServiceLoader<KlArea.Factory> builtInLoader = ServiceLoader.load(KlArea.Factory.class);
+        // Log the discovered factories
+        LOG.info("Discovering built-in factories...");
+        builtInLoader.forEach(factory -> {
+            String factoryClassName = factory.getClass().getName();
+            LOG.info("Discovered factory: {}", factoryClassName);
+            pluginMenu.getItems().add(new MenuItem("Built-in " + factoryClassName));
+        });
+
+        ServiceLoader<KlArea.Factory> pluginLoader = PluggableService.load(KlArea.Factory.class);
+
+        // Log the discovered factories
+        LOG.info("Discovering plugin factories...");
+        pluginLoader.forEach(factory -> {
+            String factoryClassName = factory.getClass().getName();
+            LOG.info("Discovered factory: {}", factoryClassName);
+            pluginMenu.getItems().add(new MenuItem("Plugin " + factoryClassName));
+        });
+
+
+        return pluginMenu;
+    }
     private MenuItem createClassicKometMenuItem() {
         MenuItem classicKometMenuItem = new MenuItem("Classic Komet");
         KeyCombination classicKometKeyCombo = new KeyCodeCombination(KeyCode.K, KeyCombination.CONTROL_DOWN);
@@ -265,7 +295,7 @@ public class AppMenu {
             Menu fileMenu = createFileMenu();
             Menu editMenu = createEditMenu();
             Menu viewMenu = createViewMenu();
-            menuBar.getMenus().addAll(fileMenu, editMenu, viewMenu);
+            menuBar.getMenus().addAll(fileMenu, editMenu, viewMenu, createPluginMenu());
         }
 
         if (IS_MAC_AND_NOT_TESTFX_TEST) {

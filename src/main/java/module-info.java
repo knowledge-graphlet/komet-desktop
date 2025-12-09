@@ -23,6 +23,7 @@ import dev.ikm.tinkar.common.service.PublicIdService;
 import dev.ikm.tinkar.entity.ChangeSetWriterService;
 import dev.ikm.tinkar.entity.EntityService;
 import dev.ikm.tinkar.entity.StampService;
+import dev.ikm.komet.layout.KlArea;
 
 module dev.ikm.komet.application {
 
@@ -82,6 +83,7 @@ module dev.ikm.komet.application {
     requires org.apache.logging.log4j;       // log4j-api
     requires org.apache.logging.log4j.core;
     requires org.apache.logging.log4j.slf4j2.impl;
+    requires dev.ikm.tinkar.plugin.layer;
 
     uses DataServiceController;
     uses DefaultDescriptionForNidService;
@@ -92,6 +94,7 @@ module dev.ikm.komet.application {
     uses TaskListsService;
     uses DefaultEvtBus;
     uses ChangeSetWriterService;
+    uses KlArea.Factory;
 
     // For ScenicView...
     //requires org.scenicview.scenicview;
