@@ -26,6 +26,7 @@ import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Utility class for managing and applying CSS stylesheets in JavaFX applications.
@@ -108,7 +109,8 @@ public final class CssUtils {
                 loadedFromFileSystemList.add(cssFile);
                 LOG.info("Loaded CSS '{}' from local file system: {}", cssFile.getFileName(), cssUri);
             } else {
-                LOG.warn("CSS file '{}' not found at local file system path '{}'", cssFile.getFileName(), cssPath);
+                LOG.info("No CSS file '{}' found at local file system path '{}'", cssFile.getFileName(), cssPath);
+                LOG.info("Trying to load CSS '{}' from class loader resources...", cssFile.getFileName());
                 loadFromResource(cssFile, cssUris);
             }
         }
@@ -128,21 +130,188 @@ public final class CssUtils {
     /**
      * Loads the specified CSS file from the class loader resources and adds its URI to the provided list.
      * This method is used as a fallback when the CSS file is not found in the local file system.
+     * 
+     * This method tries multiple approaches with comprehensive logging to diagnose resource loading issues.
      *
      * @param cssFile the {@link CssFile} enum representing the CSS file to load
      * @param cssUris the list to which the CSS URI will be added if the resource is found
      */
     private static void loadFromResource(CssFile cssFile, List<String> cssUris) {
         String resourcePath = cssFile.getResourcePath();
+        String moduleName = cssFile.getModuleName();
+        
+        LOG.info("Trying to load CSS '{}' from class loader resources...", cssFile.getFileName());
+        LOG.debug("  Full resource path: {}", resourcePath);
+        LOG.debug("  Target module: {}", moduleName);
+        
+        URL resourceUrl = null;
+        String successMethod = null;
 
-        // Attempt to retrieve the resource URL using the class loader
-        URL resourceUrl = CssUtils.class.getClassLoader().getResource(resourcePath);
+        // Try 1: Context class loader (most common for runtime resources)
+        try {
+            ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+            if (contextClassLoader != null) {
+                LOG.debug("  Try 1: Context ClassLoader: {}", contextClassLoader.getClass().getName());
+                resourceUrl = contextClassLoader.getResource(resourcePath);
+                if (resourceUrl != null) {
+                    successMethod = "Context ClassLoader";
+                    LOG.info("  ✓ Found via Context ClassLoader: {}", resourceUrl);
+                } else {
+                    LOG.debug("  ✗ Not found via Context ClassLoader");
+                }
+            }
+        } catch (Exception e) {
+            LOG.debug("  ✗ Context ClassLoader failed: {}", e.getMessage());
+        }
+
+        // Try 2: CssUtils class loader (standard approach)
+        if (resourceUrl == null) {
+            try {
+                ClassLoader cssUtilsClassLoader = CssUtils.class.getClassLoader();
+                LOG.debug("  Try 2: CssUtils ClassLoader: {}", cssUtilsClassLoader.getClass().getName());
+                resourceUrl = cssUtilsClassLoader.getResource(resourcePath);
+                if (resourceUrl != null) {
+                    successMethod = "CssUtils ClassLoader";
+                    LOG.info("  ✓ Found via CssUtils ClassLoader: {}", resourceUrl);
+                } else {
+                    LOG.debug("  ✗ Not found via CssUtils ClassLoader");
+                }
+            } catch (Exception e) {
+                LOG.debug("  ✗ CssUtils ClassLoader failed: {}", e.getMessage());
+            }
+        }
+
+        // Try 3: Class.getResource with absolute path
+        if (resourceUrl == null) {
+            try {
+                LOG.debug("  Try 3: Class.getResource with absolute path");
+                resourceUrl = CssUtils.class.getResource("/" + resourcePath);
+                if (resourceUrl != null) {
+                    successMethod = "Class.getResource";
+                    LOG.info("  ✓ Found via Class.getResource: {}", resourceUrl);
+                } else {
+                    LOG.debug("  ✗ Not found via Class.getResource");
+                }
+            } catch (Exception e) {
+                LOG.debug("  ✗ Class.getResource failed: {}", e.getMessage());
+            }
+        }
+
+        // Try 4: Module system via ModuleLayer (for JPMS modules)
+        if (resourceUrl == null) {
+            try {
+                LOG.debug("  Try 4: Module system lookup");
+                Optional<Module> moduleOpt = ModuleLayer.boot().findModule(moduleName);
+                
+                if (moduleOpt.isPresent()) {
+                    Module module = moduleOpt.get();
+                    LOG.debug("    Module found: {}", module.getName());
+                    LOG.debug("    Module is named: {}", module.isNamed());
+                    LOG.debug("    Module descriptor: {}", module.getDescriptor().toNameAndVersion());
+                    
+                    // Check if module opens/exports the package containing the resource
+                    String packageName = resourcePath.substring(0, resourcePath.lastIndexOf('/')).replace('/', '.');
+                    LOG.debug("    Target package: {}", packageName);
+                    LOG.debug("    Module packages: {}", module.getPackages());
+                    LOG.debug("    Is package in module: {}", module.getPackages().contains(packageName));
+                    
+                    // Try to get the resource via the module's class loader
+                    ClassLoader moduleClassLoader = module.getClassLoader();
+                    if (moduleClassLoader != null) {
+                        LOG.debug("    Module ClassLoader: {}", moduleClassLoader.getClass().getName());
+                        resourceUrl = moduleClassLoader.getResource(resourcePath);
+                        if (resourceUrl != null) {
+                            successMethod = "Module ClassLoader";
+                            LOG.info("  ✓ Found via Module ClassLoader: {}", resourceUrl);
+                        } else {
+                            LOG.warn("    ✗ Module ClassLoader could not find resource");
+                            
+                            // Try with getResourceAsStream to see if it exists but isn't accessible as URL
+                            try (var stream = moduleClassLoader.getResourceAsStream(resourcePath)) {
+                                if (stream != null) {
+                                    LOG.error("    ⚠ Resource EXISTS as stream but NOT as URL - this is a JPMS encapsulation issue!");
+                                    LOG.error("    The module '{}' needs to 'open' the package '{}' to unnamed modules", 
+                                            moduleName, packageName);
+                                } else {
+                                    LOG.warn("    Resource does not exist as stream either");
+                                }
+                            }
+                        }
+                    } else {
+                        LOG.warn("    Module has no class loader (bootstrap or platform loader)");
+                    }
+                } else {
+                    LOG.warn("    Module '{}' not found in boot layer", moduleName);
+                }
+            } catch (Exception e) {
+                LOG.error("  ✗ Module system lookup failed", e);
+            }
+        }
+
+        // Try 5: Direct module resource access via Module.getResourceAsStream
+        if (resourceUrl == null) {
+            try {
+                LOG.debug("  Try 5: Direct Module resource lookup");
+                Optional<Module> moduleOpt = ModuleLayer.boot().findModule(moduleName);
+                
+                if (moduleOpt.isPresent()) {
+                    Module module = moduleOpt.get();
+                    try (var stream = module.getResourceAsStream(resourcePath)) {
+                        if (stream != null) {
+                            LOG.error("  ⚠ CRITICAL: Resource found via Module.getResourceAsStream but not as URL!");
+                            LOG.error("    This confirms a JPMS encapsulation issue.");
+                            LOG.error("    SOLUTION: Add 'opens {}' to module-info.java of '{}'",
+                                    resourcePath.substring(0, resourcePath.lastIndexOf('/')).replace('/', '.'),
+                                    moduleName);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                LOG.debug("  ✗ Direct module resource lookup failed: {}", e.getMessage());
+            }
+        }
+
+        // If found, add to the list
         if (resourceUrl != null) {
             String cssResourceUri = resourceUrl.toExternalForm();
             cssUris.add(cssResourceUri);
-            LOG.info("Loaded CSS '{}' from class loader resource: {}", cssFile.getFileName(), cssResourceUri);
+            LOG.info("Loaded CSS '{}' from {} resource: {}", cssFile.getFileName(), successMethod, cssResourceUri);
         } else {
-            LOG.error("CSS resource '{}' not found in class loader.", resourcePath);
+            LOG.error("CSS resource '{}' not found in class loader after trying all methods.", resourcePath);
+            LOG.error("  - Module name: {}", moduleName);
+            LOG.error("  - Resource path: {}", resourcePath);
+            
+            // Log module information for debugging
+            try {
+                Optional<Module> moduleOpt = ModuleLayer.boot().findModule(moduleName);
+                if (moduleOpt.isPresent()) {
+                    Module module = moduleOpt.get();
+                    LOG.error("  - Module found: YES");
+                    LOG.error("  - Module packages: {}", module.getPackages());
+                    
+                    String packageName = resourcePath.substring(0, resourcePath.lastIndexOf('/')).replace('/', '.');
+                    LOG.error("  - Target package '{}' in module: {}", packageName, module.getPackages().contains(packageName));
+                    
+                    // Check opens
+                    if (module.isOpen(packageName)) {
+                        LOG.error("  - Package '{}' is OPEN", packageName);
+                    } else {
+                        LOG.error("  - Package '{}' is NOT OPEN - THIS IS LIKELY THE PROBLEM!", packageName);
+                        LOG.error("  - FIX: Add to module-info.java: opens {};", packageName);
+                    }
+                } else {
+                    LOG.error("  - Module '{}' NOT found in boot layer", moduleName);
+                }
+                
+                var kometModules = ModuleLayer.boot().modules().stream()
+                        .map(Module::getName)
+                        .filter(name -> name.contains("komet"))
+                        .toList();
+                LOG.error("  - Available Komet modules: {}", kometModules);
+                
+            } catch (Exception e) {
+                LOG.debug("Could not analyze module: {}", e.getMessage());
+            }
         }
     }
 
