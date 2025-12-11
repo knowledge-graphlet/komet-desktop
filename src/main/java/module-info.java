@@ -31,6 +31,7 @@ module dev.ikm.komet.application {
     exports dev.ikm.komet.app.util;
     opens dev.ikm.komet.app to javafx.fxml;
     opens dev.ikm.komet.app.aboutdialog to javafx.fxml;
+    requires java.xml;
 
     // TODO Not happy that I have to specify these here... Can't dynamically add modules?
     requires dev.ikm.tinkar.provider.spinedarray;
@@ -61,6 +62,7 @@ module dev.ikm.komet.application {
     requires dev.ikm.komet.details;
     requires dev.ikm.komet.builder;
     requires dev.ikm.komet.kview;
+    requires dev.ikm.komet.kleditorapp;
     requires dev.ikm.komet.artifact;
     requires dev.ikm.komet.executor;
     requires dev.ikm.komet.list;
@@ -84,6 +86,8 @@ module dev.ikm.komet.application {
     requires org.apache.logging.log4j.core;
     requires org.apache.logging.log4j.slf4j2.impl;
     requires dev.ikm.tinkar.plugin.layer;
+    requires javafx.graphics;
+    //requires org.scenicview.scenicview;
 
     uses DataServiceController;
     uses DefaultDescriptionForNidService;
