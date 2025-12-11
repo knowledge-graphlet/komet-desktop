@@ -161,61 +161,126 @@ public class PluginLoader {
      * @return the resolved plugin directory path
      */
     private static Path resolveDefaultPluginPath() {
-        Path userDir = Path.of(System.getProperty("user.dir"));
+        // Log system properties for debugging
+        LOG.debug("System properties:");
+        LOG.debug("  jpackage.app-path: {}", System.getProperty("jpackage.app-path"));
+        LOG.debug("  user.dir: {}", System.getProperty("user.dir"));
+        LOG.debug("  user.home: {}", System.getProperty("user.home"));
+        LOG.debug("  os.name: {}", System.getProperty("os.name"));
         
-        // First, check if we're running from a jlink image's bin directory
-        // If so, the plugins directory is ../plugins relative to bin
-        Path jlinkPluginPath = userDir.getParent().resolve("plugins");
-        if (Files.exists(jlinkPluginPath)) {
-            LOG.debug("Using jlink image plugin directory: {}", jlinkPluginPath);
-            return jlinkPluginPath;
-        }
-        
-        // For local maven builds, use the target/plugins directory
-        Path localPluginPath = userDir.resolve("target").resolve("plugins");
-        if (Files.exists(localPluginPath)) {
-            LOG.debug("Using local build plugin directory: {}", localPluginPath);
-            return localPluginPath;
-        }
-
-        // For installed applications - customize this based on your deployment
-        Path installedPluginPath = resolveInstalledPluginPath();
-        if (Files.exists(installedPluginPath)) {
-            LOG.debug("Using installed application plugin directory: {}", installedPluginPath);
+        // First, check if we're running from a jpackage-installed application
+        String jpackageAppPath = System.getProperty("jpackage.app-path");
+        if (jpackageAppPath != null) {
+            LOG.info("Detected jpackage.app-path: {}", jpackageAppPath);
+            Path appPath = Path.of(jpackageAppPath);
+            
+            // jpackage.app-path points to: .../Contents/MacOS/<executable-name>
+            // We need to go up to Contents directory, then navigate to runtime/Contents/Home/plugins
+            Path macosDir = appPath.getParent();  // Go to MacOS directory
+            Path contentsDir = macosDir.getParent();  // Go to Contents directory
+            
+            LOG.info("Contents directory: {}", contentsDir.toAbsolutePath());
+            
+            // Navigate to runtime/Contents/Home/plugins from Contents
+            Path installedPluginPath = contentsDir.resolve("runtime").resolve("Contents").resolve("Home").resolve("plugins");
+            LOG.info("Checking jpackage plugin path: {}", installedPluginPath.toAbsolutePath());
+            LOG.info("  Path exists: {}", Files.exists(installedPluginPath));
+            LOG.info("  Path is directory: {}", Files.isDirectory(installedPluginPath));
+            if (Files.exists(installedPluginPath)) {
+                LOG.info("  Path is writable: {}", Files.isWritable(installedPluginPath));
+            }
+            
+            // Check if this path exists
+            if (Files.exists(installedPluginPath)) {
+                LOG.info("Using jpackage plugin directory: {}", installedPluginPath);
+                return installedPluginPath;
+            }
+            
+            // Fallback: try Contents/plugins (in case structure differs)
+            Path contentsPlugins = contentsDir.resolve("plugins");
+            LOG.info("Trying fallback path: {}", contentsPlugins.toAbsolutePath());
+            LOG.info("  Fallback path exists: {}", Files.exists(contentsPlugins));
+            
+            if (Files.exists(contentsPlugins)) {
+                LOG.info("Using fallback jpackage plugin directory: {}", contentsPlugins);
+                return contentsPlugins;
+            }
+            
+            // Default to the runtime location even if it doesn't exist yet
+            LOG.warn("No existing jpackage plugin directory found. Will use (and create): {}", installedPluginPath);
             return installedPluginPath;
         }
 
-        // Default to jlink plugin path (will be created if doesn't exist)
-        LOG.debug("Using default plugin directory: {}", jlinkPluginPath);
-        return jlinkPluginPath;
-    }
-
-    /**
-     * Resolves the installed application plugin path based on the operating system.
-     * Override this method or provide a system property for custom deployments.
-     *
-     * @return the path to the installed plugins directory
-     */
-    private static Path resolveInstalledPluginPath() {
-        String appName = System.getProperty("app.name", "MyApp");
-        String os = System.getProperty("os.name", "").toLowerCase();
-
-        if (os.contains("mac")) {
-            return Path.of("/Applications")
-                    .resolve(appName + ".app")
-                    .resolve("Contents")
-                    .resolve("plugins");
-        } else if (os.contains("win")) {
-            return Path.of(System.getenv("ProgramFiles"))
-                    .resolve(appName)
-                    .resolve("plugins");
+        // If not a jpackage app, check if we're running from a jlink image
+        Path userDir = Path.of(System.getProperty("user.dir"));
+        LOG.info("Not a jpackage app. Checking jlink image structure from user.dir: {}", userDir);
+        
+        // Check for jlink image structure: if user.dir is <image>/bin, plugins are at <image>/plugins
+        Path parent = userDir.getParent();
+        LOG.debug("  user.dir parent: {}", parent);
+        
+        if (parent != null) {
+            Path jlinkPluginPath = parent.resolve("plugins");
+            LOG.info("Checking jlink plugin path: {}", jlinkPluginPath.toAbsolutePath());
+            LOG.info("  Path exists: {}", Files.exists(jlinkPluginPath));
+            
+            if (Files.exists(jlinkPluginPath)) {
+                LOG.info("Using jlink runtime image plugin directory: {}", jlinkPluginPath);
+                return jlinkPluginPath;
+            } else {
+                LOG.debug("Jlink plugin path does not exist: {}", jlinkPluginPath);
+            }
         } else {
-            // Linux/Unix
-            return Path.of("/opt")
-                    .resolve(appName)
-                    .resolve("plugins");
+            LOG.warn("user.dir has no parent (might be root directory)");
         }
+        
+        // For local maven builds, check for target/kometRuntimeImage/plugins or target/plugins
+        Path targetDir = userDir.resolve("target");
+        LOG.info("Checking Maven build directories. Target dir: {}", targetDir.toAbsolutePath());
+        LOG.info("  Target dir exists: {}", Files.exists(targetDir));
+        
+        if (Files.exists(targetDir)) {
+            // Check target/kometRuntimeImage/plugins
+            Path runtimeImagePlugins = targetDir.resolve("kometRuntimeImage").resolve("plugins");
+            LOG.info("Checking Maven runtime image plugin path: {}", runtimeImagePlugins.toAbsolutePath());
+            LOG.info("  Path exists: {}", Files.exists(runtimeImagePlugins));
+            
+            if (Files.exists(runtimeImagePlugins)) {
+                LOG.info("Using Maven build runtime image plugin directory: {}", runtimeImagePlugins);
+                return runtimeImagePlugins;
+            }
+            
+            // Check target/plugins
+            Path targetPlugins = targetDir.resolve("plugins");
+            LOG.info("Checking Maven target plugin path: {}", targetPlugins.toAbsolutePath());
+            LOG.info("  Path exists: {}", Files.exists(targetPlugins));
+            
+            if (Files.exists(targetPlugins)) {
+                LOG.info("Using Maven build plugin directory: {}", targetPlugins);
+                return targetPlugins;
+            }
+        }
+
+        // Default fallback: try to create plugins directory relative to current location
+        Path defaultPath = parent != null ? parent.resolve("plugins") : userDir.resolve("plugins");
+        LOG.warn("No existing plugin directory found anywhere!");
+        LOG.warn("Attempted paths:");
+        if (jpackageAppPath != null) {
+            Path appPath = Path.of(jpackageAppPath);
+            Path contentsDir = appPath.getParent().getParent();
+            LOG.warn("  - jpackage: {}/runtime/Contents/Home/plugins", contentsDir);
+            LOG.warn("  - jpackage fallback: {}/plugins", contentsDir);
+        }
+        if (parent != null) {
+            LOG.warn("  - jlink: {}/plugins", parent);
+        }
+        LOG.warn("  - maven: {}/target/kometRuntimeImage/plugins", userDir);
+        LOG.warn("  - maven: {}/target/plugins", userDir);
+        LOG.warn("Will create default plugin directory at: {}", defaultPath.toAbsolutePath());
+        
+        return defaultPath;
     }
+
 
     /**
      * Alternative initialization method that reads the plugin directory from a system property.
