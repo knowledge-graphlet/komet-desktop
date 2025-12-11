@@ -128,6 +128,10 @@
         </dependency>
         <dependency>
             <groupId>dev.ikm.komet</groupId>
+            <artifactId>knowledge-layout-editor</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.ikm.komet</groupId>
             <artifactId>artifact</artifactId>
         </dependency>
         <dependency>
