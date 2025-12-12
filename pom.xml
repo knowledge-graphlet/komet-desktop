@@ -6,9 +6,9 @@
     <modelVersion>4.1.0</modelVersion>
 
     <parent>
-        <groupId>dev.ikm.komet.plugins</groupId>
-        <artifactId>plugin-incubator</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <groupId>dev.ikm.build</groupId>
+        <artifactId>java-parent</artifactId>
+        <version>1.73.0</version>
     </parent>
 
     <artifactId>komet-desktop</artifactId>
@@ -423,7 +423,7 @@
                         <!-- Base Options (Common to Standard, Debug, and Profile) -->
                         <options>
                             <option>--enable-preview</option>
-                            <option>-Xmx24g</option>
+                            <option>-Xmx36g</option>
                             <option>-Dlog4j.configurationFile=$APPDIR/conf/log4j2.xml</option>
                             <option>--add-opens</option>
                             <option>javafx.graphics/javafx.scene=org.controlsfx.controls</option>
@@ -455,7 +455,7 @@
                         <winMenu>true</winMenu>
                         <javaOptions>
                             <option>--enable-preview</option>
-                            <option>-Xmx24g</option>
+                            <option>-Xmx36g</option>
                             <option>--add-opens</option>
                             <option>javafx.graphics/javafx.scene=org.controlsfx.controls</option>
                             <option>--add-exports</option>
