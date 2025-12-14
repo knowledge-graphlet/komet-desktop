@@ -12,6 +12,7 @@ import dev.ikm.komet.kview.mvvm.view.changeset.ExportController;
 import dev.ikm.komet.kview.mvvm.view.changeset.ImportController;
 import dev.ikm.komet.layout.KlArea;
 import dev.ikm.komet.layout.area.KlSupplementalArea;
+import dev.ikm.komet.layout.orchestration.OrchestrationService;
 import dev.ikm.komet.preferences.KometPreferences;
 import dev.ikm.komet.preferences.KometPreferencesImpl;
 import dev.ikm.tinkar.common.service.PluggableService;
@@ -48,11 +49,11 @@ import java.util.ServiceLoader;
 import java.util.prefs.BackingStoreException;
 
 import static dev.ikm.komet.app.App.*;
-import static dev.ikm.komet.app.AppState.RUNNING;
 import static dev.ikm.komet.kview.fxutils.FXUtils.getFocusedWindow;
 import static dev.ikm.komet.kview.mvvm.view.changeset.exchange.GitTask.OperationMode.PULL;
 import static dev.ikm.komet.kview.mvvm.view.changeset.exchange.GitTask.OperationMode.SYNC;
 import static dev.ikm.komet.kview.mvvm.viewmodel.FormViewModel.VIEW_PROPERTIES;
+import static dev.ikm.komet.layout.orchestration.Lifecycle.RUNNING;
 import static dev.ikm.komet.preferences.JournalWindowPreferences.MAIN_KOMET_WINDOW;
 
 public class AppMenu {
@@ -185,7 +186,7 @@ public class AppMenu {
 
     public void createMenuOptions(BorderPane landingPageRoot) {
         MenuBar menuBar = new MenuBar();
-
+        Stage stage = (Stage) landingPageRoot.getScene().getWindow();
         Menu fileMenu = new Menu("File");
         MenuItem about = new MenuItem("About");
         about.setOnAction(_ -> showAboutDialog());
@@ -206,8 +207,7 @@ public class AppMenu {
         MenuItem minimizeWindow = new MenuItem("Minimize");
         KeyCombination minimizeKeyCombo = new KeyCodeCombination(KeyCode.M, KeyCombination.CONTROL_DOWN);
         minimizeWindow.setOnAction(event -> {
-            Stage obj = (Stage) landingPageRoot.getScene().getWindow();
-            obj.setIconified(true);
+            stage.setIconified(true);
         });
         minimizeWindow.setAccelerator(minimizeKeyCombo);
         minimizeWindow.setDisable(IS_BROWSER);
@@ -217,14 +217,14 @@ public class AppMenu {
 
         menuBar.getMenus().add(fileMenu);
         menuBar.getMenus().add(viewMenu);
-        menuBar.getMenus().add(createPluginMenu());
+        menuBar.getMenus().add(createPluginMenu(menuBar, stage));
         menuBar.getMenus().add(windowMenu);
         menuBar.getMenus().add(exchangeMenu);
         //menuBar.getMenus().add(createDevMenu(landingPageRoot));
         landingPageRoot.setTop(menuBar);
     }
 
-    private Menu createPluginMenu() {
+    private Menu createPluginMenu(MenuBar menuBar, Stage stage) {
         Menu pluginMenu = new Menu("Plugins");
         // Use ServiceLoader to discover KlSupplementalArea.Factory implementations
 
@@ -237,6 +237,8 @@ public class AppMenu {
             LOG.info("Discovered factory: {}", factoryClassName);
             pluginMenu.getItems().add(new MenuItem("Plugin " + factoryClassName));
         });
+
+        PluggableService.first(OrchestrationService.class).addMenuItems(stage, menuBar);
 
 
         return pluginMenu;
@@ -260,6 +262,7 @@ public class AppMenu {
 
     void setupMenus(Parent parent) {
         Menu kometAppMenu;
+        Stage stage = (Stage) parent.getScene().getWindow();
 
         if (IS_MAC_AND_NOT_TESTFX_TEST) {
             MenuToolkit menuToolkit = MenuToolkit.toolkit();
@@ -287,7 +290,7 @@ public class AppMenu {
             Menu fileMenu = createFileMenu();
             Menu editMenu = createEditMenu();
             Menu viewMenu = createViewMenu();
-            menuBar.getMenus().addAll(fileMenu, editMenu, viewMenu, createPluginMenu());
+            menuBar.getMenus().addAll(fileMenu, editMenu, viewMenu, createPluginMenu(menuBar, stage));
         }
 
         if (IS_MAC_AND_NOT_TESTFX_TEST) {

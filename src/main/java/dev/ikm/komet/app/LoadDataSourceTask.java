@@ -15,15 +15,16 @@
  */
 package dev.ikm.komet.app;
 
+import dev.ikm.komet.layout.orchestration.Lifecycle;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleObjectProperty;
 import dev.ikm.tinkar.common.service.PrimitiveData;
 import dev.ikm.tinkar.common.service.TrackingCallable;
 
 public class LoadDataSourceTask extends TrackingCallable<Void> {
-    final SimpleObjectProperty<AppState> state;
+    final SimpleObjectProperty<Lifecycle> state;
 
-    public LoadDataSourceTask(SimpleObjectProperty<AppState> state) {
+    public LoadDataSourceTask(SimpleObjectProperty<Lifecycle> state) {
         super(false, true);
         this.state = state;
         updateTitle("Loading Data Source");
@@ -35,7 +36,7 @@ public class LoadDataSourceTask extends TrackingCallable<Void> {
     protected Void compute() throws Exception {
         try {
             PrimitiveData.start();
-            Platform.runLater(() -> state.set(AppState.SELECT_USER));
+            Platform.runLater(() -> state.set(Lifecycle.SELECT_USER));
             return null;
         } catch (Throwable ex) {
             ex.printStackTrace();

@@ -20,6 +20,7 @@
 package dev.ikm.komet.app;
 
 
+import dev.ikm.komet.layout.orchestration.Lifecycle;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -185,7 +186,7 @@ public class SelectDataSourceController {
         progressTab.setGraphic(kometNode.getTitleNode());
         progressTabPane.getTabs().add(progressTab);
 
-        App.state.set(AppState.SELECTED_DATA_SOURCE);
+        App.state.set(Lifecycle.SELECTED_DATA_SOURCE);
     }
 
     private void saveDataServiceProperties(DataServiceController<?> dataServiceController) {

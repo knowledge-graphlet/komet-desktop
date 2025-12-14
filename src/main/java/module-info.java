@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
+import dev.ikm.komet.app.App;
 import dev.ikm.komet.framework.KometNodeFactory;
 import dev.ikm.komet.framework.concurrent.TaskListsService;
+import dev.ikm.komet.layout.orchestration.OrchestrationService;
 import dev.ikm.tinkar.events.DefaultEvtBus;
 import dev.ikm.tinkar.common.service.DataServiceController;
 import dev.ikm.tinkar.common.service.DefaultDescriptionForNidService;
@@ -31,6 +33,7 @@ module dev.ikm.komet.application {
     exports dev.ikm.komet.app.util;
     opens dev.ikm.komet.app to javafx.fxml;
     opens dev.ikm.komet.app.aboutdialog to javafx.fxml;
+
     requires java.xml;
 
     // TODO Not happy that I have to specify these here... Can't dynamically add modules?
@@ -99,6 +102,14 @@ module dev.ikm.komet.application {
     uses DefaultEvtBus;
     uses ChangeSetWriterService;
     uses KlArea.Factory;
+    uses OrchestrationService;
+
+    provides OrchestrationService
+            with App;
+
+    uses dev.ikm.tinkar.common.service.PluggableService;
+
+    provides dev.ikm.komet.layout.orchestration.StatusReportService with App;
 
     // For ScenicView...
     //requires org.scenicview.scenicview;

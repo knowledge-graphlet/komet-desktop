@@ -25,11 +25,13 @@ import dev.ikm.komet.kview.events.SignInUserEvent;
 import dev.ikm.komet.kview.mvvm.model.GitHubPreferencesDao;
 import dev.ikm.komet.kview.mvvm.view.journal.JournalController;
 import dev.ikm.komet.kview.mvvm.view.landingpage.LandingPageController;
+import dev.ikm.komet.layout.orchestration.*;
 import dev.ikm.komet.preferences.KometPreferences;
 import dev.ikm.komet.preferences.KometPreferencesImpl;
 import dev.ikm.komet.preferences.Preferences;
 import dev.ikm.tinkar.common.alert.AlertObject;
 import dev.ikm.tinkar.common.alert.AlertStreams;
+import dev.ikm.tinkar.common.service.PluggableService;
 import dev.ikm.tinkar.common.service.PrimitiveData;
 import dev.ikm.tinkar.common.service.TinkExecutor;
 import dev.ikm.tinkar.events.Evt;
@@ -44,7 +46,10 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
@@ -54,6 +59,7 @@ import one.jpro.platform.utils.PlatformUtils;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.eclipse.collections.api.factory.Lists;
+import org.eclipse.collections.api.multimap.ImmutableMultimap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,15 +68,10 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ServiceLoader;
 import java.util.UUID;
 import java.util.prefs.BackingStoreException;
 
-import static dev.ikm.komet.app.AppState.LOADING_DATA_SOURCE;
-import static dev.ikm.komet.app.AppState.LOGIN;
-import static dev.ikm.komet.app.AppState.RUNNING;
-import static dev.ikm.komet.app.AppState.SELECT_DATA_SOURCE;
-import static dev.ikm.komet.app.AppState.SHUTDOWN;
-import static dev.ikm.komet.app.AppState.STARTING;
 import static dev.ikm.komet.app.LoginFeatureFlag.ENABLED_WEB_ONLY;
 import static dev.ikm.komet.app.util.CssFile.KOMET_CSS;
 import static dev.ikm.komet.app.util.CssFile.KVIEW_CSS;
@@ -78,6 +79,7 @@ import static dev.ikm.komet.app.util.CssUtils.addStylesheets;
 import static dev.ikm.komet.kview.events.EventTopics.JOURNAL_TOPIC;
 import static dev.ikm.komet.kview.events.EventTopics.KL_TOPIC;
 import static dev.ikm.komet.kview.events.EventTopics.USER_TOPIC;
+import static dev.ikm.komet.layout.orchestration.Lifecycle.*;
 import static dev.ikm.komet.preferences.JournalWindowPreferences.JOURNALS;
 import static dev.ikm.komet.preferences.JournalWindowPreferences.JOURNAL_IDS;
 import static dev.ikm.komet.preferences.JournalWindowSettings.JOURNAL_TITLE;
@@ -105,18 +107,20 @@ import static dev.ikm.tinkar.events.FrameworkTopics.IMPORT_TOPIC;
  * </p>
  *
  * @see Application
- * @see AppState
+ * @see Lifecycle
  * @see LoginFeatureFlag
  * @see KometPreferences
  */
-public class App extends Application  {
+public class App extends Application implements OrchestrationService, StatusReportService {
 
     private static final Logger LOG = LoggerFactory.getLogger(App.class);
+    public static final SimpleObjectProperty<Lifecycle> state = new SimpleObjectProperty<>(STARTING);
+
     public static final String ICON_LOCATION = "/icons/Komet.png";
-    public static final SimpleObjectProperty<AppState> state = new SimpleObjectProperty<>(STARTING);
     public static final SimpleObjectProperty<ConceptFacade> userProperty = new SimpleObjectProperty<>();
 
     static Stage primaryStage;
+    protected static App kometOrchestrator;
 
     WebAPI webAPI;
     static final boolean IS_BROWSER = WebAPI.isBrowser();
@@ -127,6 +131,8 @@ public class App extends Application  {
     Image appIcon;
     LandingPageController landingPageController;
     EvtBus kViewEventBus;
+    private TextField statusTextField = new TextField("Status");
+
 
     AppGithub appGithub;
     AppClassicKomet appClassicKomet;
@@ -204,6 +210,10 @@ public class App extends Application  {
         System.out.println(context.getConfiguration());
     }
 
+    public App() {
+        this.kometOrchestrator = this;
+    }
+
     @Override
     public void init() throws Exception {
         initLog4J2FromConf();
@@ -277,7 +287,7 @@ public class App extends Application  {
             if (state.get() == RUNNING) {
                 appPages.launchLandingPage(primaryStage, loggedInUser);
             } else {
-                state.set(AppState.SELECT_DATA_SOURCE);
+                state.set(Lifecycle.SELECT_DATA_SOURCE);
                 state.addListener(this::appStateChangeListener);
                 appPages.launchSelectDataSourcePage(primaryStage);
             }
@@ -361,19 +371,19 @@ public class App extends Application  {
     }
 
     /**
-     * Initiates the login process by setting the application state to {@link AppState#LOGIN}
+     * Initiates the login process by setting the application state to {@link Lifecycle#LOGIN}
      * and launching the login page.
      *
      * @param stage the current application stage
      */
     private void startLogin(Stage stage) {
-        state.set(LOGIN);
+        state.set(Lifecycle.LOGIN);
         appPages.launchLoginPage(stage);
     }
 
     /**
      * Initiates the data source selection process by setting the application state
-     * to {@link AppState#SELECT_DATA_SOURCE}, adding a state change listener, and launching
+     * to {@link Lifecycle#SELECT_DATA_SOURCE}, adding a state change listener, and launching
      * the data source selection page.
      *
      * @param stage the current application stage
@@ -395,6 +405,78 @@ public class App extends Application  {
             // Immutable copy, since we are getting: ConcurrentModificationException
             Lists.immutable.ofAll(journalControllersList).forEach(JournalController::close);
         }
+    }
+
+    /**
+     * Returns the primary stage of the application.
+     *
+     * @return the primary stage
+     */
+    @Override
+    public Stage primaryStage() {
+        return primaryStage;
+    }
+    /**
+     * Returns the lifecycle property of the KometOrchestrator.
+     *
+     * @return the lifecycle property
+     */
+    @Override
+    public SimpleObjectProperty<Lifecycle> lifecycleProperty() {
+        return state;
+    }
+
+
+
+    /**
+     * Returns a {@link StatusReportService} provider. The provider creates an instance of a {@link StatusReportService}
+     * that reports the status by calling the {@link App#reportStatus(String)} method from the
+     * {@link App} class.
+     *
+     * @return a provider for {@link StatusReportService}
+     */
+    public static App provider() {
+        return App.kometOrchestrator;
+    }
+
+    /**
+     * Reports the status by logging the message and updating the statusTextField on the UI thread.
+     *
+     * @param message the status message to report
+     */
+    public void reportStatus(String message) {
+        LOG.info(message);
+        Platform.runLater(() -> statusTextField.setText(message));
+    }
+
+    /**
+     * Adds menu items to the specified menu bar based on the provided MenuService
+     * implementation, and then appends a Window menu from the WindowMenuService.
+     *
+     * @param menuBar the menu bar to add the menu items to
+     */
+    public void addMenuItems(Stage stage, MenuBar menuBar) {
+        // Add menu items...
+        ServiceLoader<MenuService> menuProviders = PluggableService.load(MenuService.class);
+        menuProviders.forEach(menuProvider -> {
+            ImmutableMultimap<String, MenuItem> menuMap = menuProvider.getMenuItems(stage);
+            menuMap.forEachKeyValue((menuName, menuItem) -> {
+                boolean found = false;
+                for (Menu menu: menuBar.getMenus()) {
+                    if (menu.getText().equals(menuName)) {
+                        menu.getItems().add(menuItem);
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    Menu menu = new Menu(menuName);
+                    menu.getItems().add(menuItem);
+                    menuBar.getMenus().add(menu);
+                }
+            });
+        });
+        PluggableService.first(WindowMenuService.class).addWindowMenu(stage, menuBar);
     }
 
     private StackPane createRootPane(Node... children) {
@@ -496,7 +578,7 @@ public class App extends Application  {
         }
     }
 
-    private void appStateChangeListener(ObservableValue<? extends AppState> observable, AppState oldValue, AppState newValue) {
+    private void appStateChangeListener(ObservableValue<? extends Lifecycle> observable, Lifecycle oldValue, Lifecycle newValue) {
         try {
             switch (newValue) {
                 case SELECTED_DATA_SOURCE -> {

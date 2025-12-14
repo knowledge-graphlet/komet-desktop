@@ -12,6 +12,7 @@ import dev.ikm.komet.kview.mvvm.view.journal.JournalController;
 import dev.ikm.komet.kview.mvvm.view.landingpage.LandingPageViewFactory;
 import dev.ikm.komet.kview.mvvm.view.login.LoginPageController;
 import dev.ikm.komet.kview.mvvm.view.loginauthor.LoginAuthorController;
+import dev.ikm.komet.layout.orchestration.Lifecycle;
 import dev.ikm.komet.navigator.graph.GraphNavigatorNodeFactory;
 import dev.ikm.komet.preferences.KometPreferences;
 import dev.ikm.komet.preferences.KometPreferencesImpl;
@@ -19,6 +20,7 @@ import dev.ikm.komet.search.SearchNodeFactory;
 import dev.ikm.tinkar.common.service.PrimitiveData;
 import dev.ikm.tinkar.coordinate.view.calculator.ViewCalculator;
 import dev.ikm.tinkar.entity.ConceptEntity;
+import dev.ikm.tinkar.entity.EntityHandle;
 import dev.ikm.tinkar.entity.EntityService;
 import dev.ikm.tinkar.terms.ConceptFacade;
 import dev.ikm.tinkar.terms.TinkarTerm;
@@ -43,7 +45,6 @@ import java.util.UUID;
 
 import static dev.ikm.komet.app.App.IS_BROWSER;
 import static dev.ikm.komet.app.App.IS_MAC;
-import static dev.ikm.komet.app.AppState.SHUTDOWN;
 import static dev.ikm.komet.app.util.CssFile.ICONS;
 import static dev.ikm.komet.app.util.CssFile.KLCORE_CSS;
 import static dev.ikm.komet.app.util.CssFile.KLEDITOR_CSS;
@@ -59,6 +60,7 @@ import static dev.ikm.komet.kview.mvvm.viewmodel.FormViewModel.CURRENT_JOURNAL_W
 import static dev.ikm.komet.kview.mvvm.viewmodel.FormViewModel.VIEW_PROPERTIES;
 import static dev.ikm.komet.kview.mvvm.viewmodel.JournalViewModel.JOURNAL_NAME;
 import static dev.ikm.komet.kview.mvvm.viewmodel.JournalViewModel.WINDOW_SETTINGS;
+import static dev.ikm.komet.layout.orchestration.Lifecycle.SHUTDOWN;
 import static dev.ikm.komet.preferences.JournalWindowPreferences.AUTHOR_LOGIN_WINDOW;
 import static dev.ikm.komet.preferences.JournalWindowPreferences.DEFAULT_JOURNAL_HEIGHT;
 import static dev.ikm.komet.preferences.JournalWindowPreferences.DEFAULT_JOURNAL_WIDTH;
@@ -149,7 +151,7 @@ public class AppPages {
             ConceptEntity userConceptEntity = loginAuthorViewModel.getPropertyValue(SELECTED_AUTHOR);
             ConceptFacade loggedInUser = ConceptFacade.make(userConceptEntity.nid());
             App.userProperty.set(loggedInUser);
-            App.state.set(AppState.RUNNING);
+            App.state.set(Lifecycle.RUNNING);
         });
     }
 
@@ -166,7 +168,7 @@ public class AppPages {
             Set<ConceptEntity> conceptEntitySet = fetchDescendentsOfConcept(viewCalculator, TinkarTerm.USER.publicId());
             if (conceptEntitySet.isEmpty()) {
                 // add default user into set of available users
-                conceptEntitySet.add(EntityService.get().getEntityFast(TinkarTerm.USER));
+                conceptEntitySet.add(EntityHandle.getConceptOrThrow(TinkarTerm.USER.nid()));
             }
 
             // check for name or public id
@@ -193,7 +195,7 @@ public class AppPages {
                         // bypass login screen
                         LOG.info("Developer By Pass {} = {}, name = {}", DEV_AUTHOR, devAuthorPropStr, viewCalculator.getDescriptionTextOrNid(conceptEntity.nid()));
                         App.userProperty.set(conceptEntity.toProxy());
-                        App.state.set(AppState.RUNNING);
+                        App.state.set(Lifecycle.RUNNING);
                     }, ()->
                             // Developer entered a non existing user
                             LOG.warn("No concept entity found for user id {}. Will be showing login screen.", devAuthorPropStr)
